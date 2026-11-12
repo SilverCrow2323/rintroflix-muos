@@ -62,3 +62,7 @@ Built with [MkDocs Material](https://squidfunk.github.io/mkdocs-material/), Merm
 ## 📜 License
 
 No license has been selected yet. Until a license is added, normal copyright applies and reuse/redistribution permissions should not be assumed.
+
+## 📚 Practical Wiki
+
+Use the [GitHub Wiki](https://github.com/SilverCrow2323/rintroflix-muos/wiki) for short task guides and FAQs. The tracked source is in [wiki-source/](wiki-source/); maintainers can publish reviewed pages with `sh tools/publish_wiki.sh`. The detailed handbook remains the [MkDocs site](https://silvercrow2323.github.io/rintroflix-muos/).
