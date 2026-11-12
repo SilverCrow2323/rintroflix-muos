@@ -12,14 +12,32 @@ DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 cd "$DIR" || exit 1
 mkdir -p "$DIR/data"
 LOG="$DIR/data/rintroflix-launch.log"
-echo "$(date) === RintrofliX 2.1.0 start ===" >>"$LOG"
+echo "$(date) === RintrofliX 2.6.0 start ===" >>"$LOG"
+
+# Fail visibly and leave a useful diagnostic instead of silently returning to
+# the muOS launcher when an incomplete package is installed.
+if [ ! -f "$DIR/rintroflix/main.py" ]; then
+    echo "$(date) FATAL: missing rintroflix/main.py; this is an incomplete source package" >>"$LOG"
+    echo "RintrofliX cannot start: application entry point is missing." >>"$DIR/data/rintroflix.log"
+    exit 43
+fi
+if [ ! -f "$DIR/rintroflix/ui.py" ] || [ ! -f "$DIR/rintroflix/player.py" ]; then
+    echo "$(date) FATAL: required UI/player module missing; package is incomplete" >>"$LOG"
+    echo "RintrofliX cannot start: required UI/player modules are missing." >>"$DIR/data/rintroflix.log"
+    exit 43
+fi
+
 [ -f "$DIR/lib/glyph_install.sh" ] && . "$DIR/lib/glyph_install.sh" && \
     INSTALL_GLYPH "$DIR/resources/rintroflix.png" "rintroflix"
 
 # Runtime 1: Python + pygame already installed in muOS.
 PY_SYS=""
-if command -v python3 >/dev/null 2>&1 && python3 -c 'import pygame' >/dev/null 2>&1; then
-    PY_SYS="$(command -v python3)"
+if command -v python3 >/dev/null 2>&1; then
+    if python3 -c 'import pygame' >>"$DIR/data/rintroflix.log" 2>&1; then
+        PY_SYS="$(command -v python3)"
+    else
+        echo "$(date) system python exists but pygame import failed" >>"$LOG"
+    fi
 fi
 
 # Runtime 2: the pygame wheel installed by VoidDesk.
@@ -97,17 +115,9 @@ elif [ -n "$ROOTFS" ]; then
     for M in rintroflix_app dev proc sys; do mountpoint -q "$ROOTFS/$M" && umount -l "$ROOTFS/$M" 2>/dev/null; done
 else
     EXIT=42
-    echo "$(date) ERRORE: runtime Python3 + pygame non disponibile" >>"$LOG"
+    echo "$(date) ERROR: no usable Python3 + pygame runtime found" >>"$LOG"
+    echo "No usable Python3/Pygame runtime found." >>"$DIR/data/rintroflix.log"
 fi
 
 echo "$(date) === RintrofliX exit $EXIT ===" >>"$LOG"
-if [ "$EXIT" -ne 0 ] && command -v python3 >/dev/null 2>&1 && [ -f "$DIR/lib/fbmsg.py" ]; then
-    if [ "$EXIT" -eq 42 ]; then
-        python3 "$DIR/lib/fbmsg.py" "RintrofliX - runtime mancante" 12 \
-            "Python3 + pygame non sono disponibili." "" \
-            "Avvia VoidDesk e completa il setup del runtime." </dev/null
-    else
-        tail -14 "$DIR/data/rintroflix.log" | python3 "$DIR/lib/fbmsg.py" "RintrofliX - errore" 14
-    fi
-fi
 exit "$EXIT"
