@@ -23,6 +23,15 @@
 | rintroflix/player.py | ⏳ Pending | MPV IPC, playback OSD and controls |
 | rintroflix/logos.py | ✅ Imported | Asynchronous channel-logo cache |
 
+## Automated checks
+
+The repository now has two independent workflows:
+
+- [Handbook build and deployment](https://github.com/SilverCrow2323/rintroflix-muos/actions/workflows/docs.yml) — MkDocs strict build and GitHub Pages deployment.
+- [Source sanity checks](https://github.com/SilverCrow2323/rintroflix-muos/actions/workflows/source-checks.yml) — Python bytecode compilation, shell syntax validation and required-path checks for the imported subset.
+
+The source sanity workflow passing does **not** mean the application is complete: it can only compile files that are currently present in the repository.
+
 ## Remaining source assets and verification
 
 | Item | Status |
