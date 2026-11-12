@@ -52,6 +52,7 @@ DEFAULTS = {
     "enabled_addons": [],
     "addon_repositories": [],
     "boot_animation": True,
+    "muos_profile": "auto",  # auto | andromeda | not_andromeda
     "button_map": {
         "0": "A", "1": "B", "2": "X", "3": "Y",
         "4": "L1", "5": "R1", "6": "SELECT", "7": "START",
