@@ -31,6 +31,7 @@ jobs:
       - name: Validate source and launcher
         run: |
           python -m compileall -q rintroflix tools
+          python -m py_compile rintroflix/main.py tools/bootstrap_runtime.py tools/build_muxapp.py
           bash -n mux_launch.sh
           bash -n lib/glyph_install.sh
           test -f rintroflix/main.py
@@ -38,11 +39,11 @@ jobs:
           test -f rintroflix/player.py
           test -f tools/bootstrap_runtime.py
       - name: Build muOS muxapp
-        run: python tools/build_muxapp.py --output dist/RintrofliX-2.6.2.muxapp
+        run: python tools/build_muxapp.py --output dist/RintrofliX-2.6.3.muxapp
       - name: Upload installable package
         uses: actions/upload-artifact@v4
         with:
-          name: RintrofliX-2.6.2-muOS
-          path: dist/RintrofliX-2.6.2.muxapp
+          name: RintrofliX-2.6.3-muOS
+          path: dist/RintrofliX-2.6.3.muxapp
           if-no-files-found: error
           retention-days: 30
