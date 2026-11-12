@@ -1,0 +1,49 @@
+name: Source sanity checks
+on:
+  push:
+    branches: [main]
+    paths:
+      - "rintroflix/**"
+      - "lib/**"
+      - "mux_launch.sh"
+      - ".github/workflows/source-checks.yml"
+  pull_request:
+    paths:
+      - "rintroflix/**"
+      - "lib/**"
+      - "mux_launch.sh"
+      - ".github/workflows/source-checks.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-sanity:
+    name: Compile imported source
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Compile imported Python modules
+        run: python -m compileall -q rintroflix
+      - name: Validate shell scripts
+        run: |
+          bash -n mux_launch.sh
+          bash -n lib/glyph_install.sh
+      - name: Verify required source paths are tracked
+        run: |
+          test -f rintroflix/config.py
+          test -f rintroflix/net.py
+          test -f rintroflix/m3u.py
+          test -f rintroflix/epg.py
+          test -f rintroflix/addons.py
+          test -f rintroflix/repository.py
+          test -f rintroflix/input.py
+          test -f rintroflix/fbdisplay.py
+          test -f rintroflix/logos.py
+          test -f mux_launch.sh
