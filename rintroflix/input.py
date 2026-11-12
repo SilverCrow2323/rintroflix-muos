@@ -4,24 +4,64 @@ from __future__ import annotations
 
 import os
 import struct
+import subprocess
 
 _EV_KEY = 1
 _EV_ABS = 3
 _EVENT_SIZE = struct.calcsize("llHHi")
-KEYMAP = {
+KEYMAP_ANDROMEDA = {
     304: "A", 305: "B", 306: "Y", 307: "X",
-    308: "L1", 309: "R1", 314: "L2", 315: "R2",
-    310: "SELECT", 311: "START", 312: "MENU",
+    310: "L1", 311: "R1", 312: "L2", 313: "R2",
+    314: "SELECT", 315: "START", 316: "MENU",
     114: "VOL-", 115: "VOL+",
 }
+KEYMAP_NON_ANDROMEDA = {
+    304: "A", 305: "B", 307: "X", 308: "Y",
+    310: "L1", 311: "R1", 312: "SELECT", 313: "L3",
+    314: "R3", 315: "MENU", 316: "START",
+    317: "L2", 318: "R2", 114: "VOL-", 115: "VOL+",
+}
+
+def detect_muos_release():
+    value = os.environ.get("MUOS_VERSION", "")
+    if not value:
+        try:
+            value = subprocess.run(
+                ["sh", "-c", '. /opt/muos/script/var/func.sh 2>/dev/null; GET_VAR system version 2>/dev/null'],
+                capture_output=True, text=True, timeout=2).stdout.strip()
+        except (OSError, subprocess.SubprocessError):
+            value = ""
+    if not value:
+        try:
+            with open("/opt/muos/config/system/version", encoding="utf-8") as stream:
+                value = stream.readline().strip()
+        except OSError:
+            value = ""
+    return "andromeda" if "andromeda" in value.lower() else "not_andromeda"
+
+def resolve_profile(selection="auto"):
+    selection = str(selection or "auto").lower()
+    return detect_muos_release() if selection == "auto" else (
+        "andromeda" if selection == "andromeda" else "not_andromeda")
+
+def keymap_for(selection="auto"):
+    return dict(KEYMAP_ANDROMEDA if resolve_profile(selection) == "andromeda"
+                else KEYMAP_NON_ANDROMEDA)
+
 
 
 class InputReader:
-    def __init__(self, device_dir=None):
+    def __init__(self, device_dir=None, profile="auto"):
+        self.profile = profile
+        self.keymap = keymap_for(profile)
         self.device_dir = device_dir or os.environ.get("RINTROFLIX_INPUT_DIR", "/dev/input")
         self.fds = []
         self.hx = 0
         self.hy = 0
+
+    def set_profile(self, profile):
+        self.profile = profile
+        self.keymap = keymap_for(profile)
 
     def start(self):
         self.stop()
@@ -68,7 +108,7 @@ class InputReader:
                 for offset in range(0, usable, _EVENT_SIZE):
                     _sec, _usec, etype, code, value = struct.unpack_from("llHHi", data, offset)
                     if etype == _EV_KEY and value == 1:
-                        key = KEYMAP.get(code)
+                        key = self.keymap.get(code)
                         if key:
                             pressed.append(key)
                     elif etype == _EV_ABS:
