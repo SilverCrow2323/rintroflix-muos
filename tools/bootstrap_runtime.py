@@ -105,26 +105,24 @@ def main():
         env = os.environ.copy()
         env["PYTHONPATH"] = staging
         env["PYGAME_HIDE_SUPPORT_PROMPT"] = "1"
-        # Verify actual SDL video initialization, not just Python import.
+        # muOS uses an off-screen software surface copied to /dev/fb0.
+        # SDL video drivers are deliberately not required during bootstrap.
         smoke = """
-import os, sys, pygame
+import pygame
+pygame.font.init()
+pygame.event.init()
+surface = pygame.Surface((640, 480), depth=32)
+surface.fill((12, 24, 36))
+pygame.draw.rect(surface, (255, 255, 255), (4, 4, 20, 20))
+scaled = pygame.transform.scale(surface, (320, 240))
+assert surface.get_size() == (640, 480)
+assert scaled.get_size() == (320, 240)
 print("pygame=" + str(pygame.version.ver))
 print("sdl=" + str(pygame.get_sdl_version()))
-errors = []
-for driver in ("dummy", "fbcon", "kmsdrm", "wayland", "x11"):
-    try:
-        pygame.display.quit()
-        os.environ["SDL_VIDEODRIVER"] = driver
-        pygame.display.init()
-        surface = pygame.display.set_mode((640, 480))
-        print("video_driver=" + driver)
-        print("surface=%sx%s" % surface.get_size())
-        pygame.display.quit()
-        sys.exit(0)
-    except Exception as exc:
-        errors.append("%s: %s" % (driver, str(exc) or repr(exc)))
-print("video_errors=" + " | ".join(errors))
-sys.exit(4)
+print("renderer=software-surface")
+print("surface=%sx%s" % surface.get_size())
+pygame.event.quit()
+pygame.font.quit()
 """
         check = subprocess.run([sys.executable, "-c", smoke],
                                env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -132,7 +130,7 @@ sys.exit(4)
         if check.returncode:
             raise RuntimeError("pygame/SDL smoke test failed (rc=%s): %s %s" %
                                (check.returncode, check.stdout[-1600:], check.stderr[-1600:]))
-        log("SDL display smoke test OK: " + check.stdout.strip().replace("\\n", "; "))
+        log("Software rendering smoke test OK: " + check.stdout.strip().replace("\\n", "; "))
         shutil.rmtree(RUNTIME, ignore_errors=True)
         os.rename(staging, RUNTIME)
         with open(MARKER, "w") as marker:
