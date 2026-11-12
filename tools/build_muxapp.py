@@ -2,7 +2,6 @@
 """Build a muOS .muxapp with all application files inside RintrofliX/."""
 from __future__ import annotations
 import argparse
-import stat
 from pathlib import Path
 import zipfile
 
@@ -13,19 +12,6 @@ INCLUDE_FILES = (
     "ARCHITECTURE.md", "CHANGELOG.md", "ADDON_SDK.md",
 )
 INCLUDE_DIRS = ("rintroflix", "lib", "tools", "presets", "resources", "glyph", "data")
-
-ROOT_LAUNCHER = """#!/bin/sh
-# HELP: RintrofliX - handheld media centre: Live TV, local library, add-ons and TV guide
-# ICON: rintroflix
-# GRID: RintrofliX
-HERE="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
-APP="$HERE/RintrofliX"
-if [ ! -f "$APP/mux_launch.sh" ]; then
-    echo "RintrofliX package is incomplete: missing RintrofliX/mux_launch.sh" >&2
-    exit 43
-fi
-exec "$APP/mux_launch.sh" "$@"
-"""
 
 def main() -> int:
     parser = argparse.ArgumentParser()
