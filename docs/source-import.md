@@ -21,7 +21,7 @@
 | rintroflix/main.py | ⏳ Pending | Main application and screen workflows |
 | rintroflix/ui.py | ⏳ Pending | Pygame interface |
 | rintroflix/player.py | ⏳ Pending | MPV IPC, playback OSD and controls |
-| rintroflix/logos.py | ⏳ Pending | Asynchronous channel-logo cache |
+| rintroflix/logos.py | ✅ Imported | Asynchronous channel-logo cache |
 
 ## Remaining source assets and verification
 
