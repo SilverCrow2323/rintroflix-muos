@@ -1,0 +1,51 @@
+name: Build RintrofliX muOS package
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "rintroflix/**"
+      - "lib/**"
+      - "tools/**"
+      - "presets/**"
+      - "resources/**"
+      - "mux_launch.sh"
+      - "mux_lang.ini"
+      - "VERSION"
+      - ".github/workflows/build-muxapp.yml"
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Validate source and launcher
+        run: |
+          python -m compileall -q rintroflix tools
+          bash -n mux_launch.sh
+          bash -n lib/glyph_install.sh
+          test -f rintroflix/main.py
+          test -f rintroflix/ui.py
+          test -f rintroflix/player.py
+          test -f tools/bootstrap_runtime.py
+      - name: Build muOS muxapp
+        run: python tools/build_muxapp.py --output dist/RintrofliX-2.6.1.muxapp
+      - name: Upload installable package
+        uses: actions/upload-artifact@v4
+        with:
+          name: RintrofliX-2.6.1-muOS
+          path: dist/RintrofliX-2.6.1.muxapp
+          if-no-files-found: error
+          retention-days: 30
