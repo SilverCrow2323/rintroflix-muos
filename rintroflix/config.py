@@ -24,7 +24,7 @@ for _directory in (DATA_DIR, CACHE_DIR, EPG_CACHE_DIR, PLAYLIST_DIR, REC_DIR, AD
     _directory.mkdir(parents=True, exist_ok=True)
 
 APP_NAME = "RintrofliX"
-APP_VERSION = "2.6.1"
+APP_VERSION = "2.6.2"
 APP_TAGLINE = "IPTV · LIVE TV · YOUR SIGNAL, YOUR WAY"
 
 PRESET_PLAYLISTS = [
