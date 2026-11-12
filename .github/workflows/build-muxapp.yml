@@ -39,11 +39,11 @@ jobs:
           test -f rintroflix/player.py
           test -f tools/bootstrap_runtime.py
       - name: Build muOS muxapp
-        run: python tools/build_muxapp.py --output dist/RintrofliX-2.6.3.muxapp
+        run: python tools/build_muxapp.py --output dist/RintrofliX-2.6.4.muxapp
       - name: Upload installable package
         uses: actions/upload-artifact@v4
         with:
-          name: RintrofliX-2.6.3-muOS
-          path: dist/RintrofliX-2.6.3.muxapp
+          name: RintrofliX-2.6.4-muOS
+          path: dist/RintrofliX-2.6.4.muxapp
           if-no-files-found: error
           retention-days: 30
