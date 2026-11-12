@@ -114,9 +114,29 @@ elif [ -n "$ROOTFS" ]; then
     fi
     for M in rintroflix_app dev proc sys; do mountpoint -q "$ROOTFS/$M" && umount -l "$ROOTFS/$M" 2>/dev/null; done
 else
-    EXIT=42
-    echo "$(date) ERROR: no usable Python3 + pygame runtime found" >>"$LOG"
-    echo "No usable Python3/Pygame runtime found." >>"$DIR/data/rintroflix.log"
+    # First-run bootstrap: install a matching ARM pygame wheel locally.
+    # TLS verification is mandatory; never fall back to an insecure download.
+    if command -v python3 >/dev/null 2>&1 && [ -f "$DIR/tools/bootstrap_runtime.py" ]; then
+        echo "$(date) no pygame runtime; starting first-run bootstrap" >>"$LOG"
+        python3 "$DIR/tools/bootstrap_runtime.py" >>"$DIR/data/rintroflix-bootstrap.log" 2>&1
+        BOOT_RC=$?
+        if [ "$BOOT_RC" -eq 0 ] && [ -f "$DIR/data/.pygame_ready" ] && [ -d "$DIR/runtime" ]; then
+            VD_RT="$DIR/runtime"
+            echo "$(date) bootstrap successful; launching with local runtime" >>"$LOG"
+            export PYTHONPATH="$VD_RT${PYTHONPATH:+:$PYTHONPATH}"
+            export PYGAME_HIDE_SUPPORT_PROMPT=1
+            RINTROFLIX_FB=1 python3 "$DIR/rintroflix/main.py" >>"$DIR/data/rintroflix.log" 2>&1
+            EXIT=$?
+        else
+            EXIT=42
+            echo "$(date) bootstrap failed (rc=$BOOT_RC); see rintroflix-bootstrap.log" >>"$LOG"
+            echo "Runtime setup failed. Check data/rintroflix-bootstrap.log." >>"$DIR/data/rintroflix.log"
+        fi
+    else
+        EXIT=42
+        echo "$(date) ERROR: Python3 or tools/bootstrap_runtime.py unavailable" >>"$LOG"
+        echo "Python3/runtime bootstrap unavailable." >>"$DIR/data/rintroflix.log"
+    fi
 fi
 
 echo "$(date) === RintrofliX exit $EXIT ===" >>"$LOG"
