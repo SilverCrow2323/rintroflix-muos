@@ -13,7 +13,7 @@ _FBIOGET_VSCREENINFO = 0x4600
 _FBIOPUT_VSCREENINFO = 0x4601
 _FBIOGET_FSCREENINFO = 0x4602
 _FBIOBLANK = 0x4611
-_STATE = {"fb": None, "original_flip": None, "original_update": None}
+_STATE = {"fb": None, "original_flip": None, "original_update": None, "error": ""}
 
 
 def _probe(file_obj):
@@ -40,6 +40,7 @@ class _Framebuffer:
         device = os.environ.get("RINTROFLIX_FB_DEV", "/dev/fb0")
         sysfs = os.environ.get("RINTROFLIX_FB_SYSFS", "/sys/class/graphics/fb0")
         self.ok = False
+        self.error = ""
         try:
             self.file = open(device, "r+b")
             try:
@@ -65,7 +66,8 @@ class _Framebuffer:
             self.pitch = self.frame.get_pitch()
             self._scaled = None
             self.ok = True
-        except Exception:
+        except Exception as exc:
+            self.error = "%s: %s" % (type(exc).__name__, str(exc) or repr(exc))
             self.close()
 
     def close(self):
@@ -106,6 +108,10 @@ class _Framebuffer:
             pass
 
 
+def last_error():
+    return _STATE.get("error", "")
+
+
 def info():
     fb = _STATE.get("fb")
     if fb is None or not fb.ok:
@@ -119,7 +125,9 @@ def attach(surface):
         old.close()
     fb = _Framebuffer()
     if not fb.ok:
+        _STATE["error"] = fb.error or "framebuffer initialization failed"
         return False
+    _STATE["error"] = ""
     _STATE["fb"] = fb
 
     def _flip():
