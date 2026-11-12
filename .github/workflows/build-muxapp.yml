@@ -14,9 +14,6 @@ on:
       - "VERSION"
       - ".github/workflows/build-muxapp.yml"
   workflow_dispatch:
-  push:
-    tags:
-      - "v*"
 
 permissions:
   contents: read
