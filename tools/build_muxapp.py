@@ -29,7 +29,7 @@ exec "$APP/mux_launch.sh" "$@"
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--output", default="dist/RintrofliX-2.6.2.muxapp")
+    parser.add_argument("--output", default="dist/RintrofliX-2.6.3.muxapp")
     args = parser.parse_args()
     output = (ROOT / args.output).resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -55,11 +55,6 @@ def main() -> int:
                     files.append(path)
 
     with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
-        root_info = zipfile.ZipInfo("mux_launch.sh")
-        root_info.external_attr = (stat.S_IFREG | 0o755) << 16
-        root_info.compress_type = zipfile.ZIP_DEFLATED
-        archive.writestr(root_info, ROOT_LAUNCHER.encode("utf-8"))
-
         for path in sorted(files):
             rel = path.relative_to(ROOT).as_posix()
             arcname = APP_DIR + "/" + rel
@@ -78,10 +73,10 @@ def main() -> int:
             packaged = APP_DIR + "/" + required_path
             if packaged not in names:
                 raise SystemExit("Archive is missing " + packaged)
-        if "mux_launch.sh" not in names:
-            raise SystemExit("Archive is missing root launcher")
-        if any(name.startswith("rintroflix/") for name in names):
-            raise SystemExit("Application files escaped the RintrofliX/ directory")
+        if "RintrofliX/mux_launch.sh" not in names:
+            raise SystemExit("Archive is missing RintrofliX/mux_launch.sh")
+        if any(not name.startswith("RintrofliX/") for name in names):
+            raise SystemExit("Unexpected file outside RintrofliX/")
     print("Built %s (%d bytes, %d files)" % (output, output.stat().st_size, len(names)))
     return 0
 
