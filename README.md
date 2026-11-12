@@ -14,7 +14,7 @@
 </p>
 
 > [!IMPORTANT]
-> This repository is being established as the canonical home for RintrofliX. The current documented application baseline is **2.6.0**. The initial commit focuses on the project handbook and automated documentation publishing; the application source mirror and release pipeline are the next repository-integration step.
+> The canonical repository is being populated from the verified RintrofliX 2.6.0 working tree. Documentation and a first source subset are committed. The source mirror is **not yet complete**: core UI/player modules, artwork/fonts, tests and the release builder still need to be imported before this repository can produce a full application package.
 
 ## ✨ What is RintrofliX?
 
@@ -45,12 +45,13 @@ The documentation is a living website, not a static wall of text:
 
 | Area | Baseline |
 |---|---|
-| Application | 2.6.0 |
+| Application reference version | 2.6.0 |
 | Add-on API | v1 actions + v2 source providers/playback hook |
 | Repository service | HTTPS index + SHA-256 package integrity |
 | Publisher signatures | Not implemented |
-| Automated tests | 22 passing in the 2.6.0 working source baseline |
+| Working-tree tests | 22 passed in the 2.6.0 baseline; CI rerun pending |
 | Device validation | Pending physical RG35XX H / muOS testing |
+| GitHub source mirror | Partial import; not a complete build tree |
 
 **Important:** SHA-256 verifies that downloaded bytes match the repository index. It does not prove who published that index. Do not treat unsigned repositories as authenticated publishers.
 
