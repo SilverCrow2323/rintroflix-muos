@@ -53,6 +53,7 @@ def keymap_for(selection="auto"):
 class InputReader:
     def __init__(self, device_dir=None, profile="auto"):
         self.profile = profile
+        self.resolved_profile = resolve_profile(profile)
         self.keymap = keymap_for(profile)
         self.device_dir = device_dir or os.environ.get("RINTROFLIX_INPUT_DIR", "/dev/input")
         self.fds = []
@@ -61,6 +62,7 @@ class InputReader:
 
     def set_profile(self, profile):
         self.profile = profile
+        self.resolved_profile = resolve_profile(profile)
         self.keymap = keymap_for(profile)
 
     def start(self):
