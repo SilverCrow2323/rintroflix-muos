@@ -50,7 +50,7 @@ def main() -> int:
             seen.add(rel)
             info = zipfile.ZipInfo(rel)
             mode = path.stat().st_mode
-            info.external_attr = (stat.S_IMODE(mode) | (stat.S_IFREG << 16)) << 16
+            info.external_attr = (stat.S_IFREG | stat.S_IMODE(mode)) << 16
             info.compress_type = zipfile.ZIP_DEFLATED
             archive.writestr(info, path.read_bytes())
     with zipfile.ZipFile(output) as archive:
