@@ -1192,6 +1192,7 @@ class SettingsScreen(Screen):
             ("Stream buffer: %d sec" % cfg.get("player_cache_secs", 5), "PLAYBACK · Network cache, 0–30 seconds", "↔", "", "settings"),
             ("TV guide cache: %d hours" % cfg.get("epg_max_age_hours", 12), "SOURCES · XMLTV refresh interval, 1–48 hours", "↔", "", "guide"),
             ("User-Agent", cfg.get("user_agent", "")[:70], "A", "", "sources"),
+            ("muOS profile: %s" % self.app.input.profile.upper(), "SYSTEM · Auto / Andromeda (=) / Non-Andromeda (!=)", "↔", "", "settings"),
             ("About RintrofliX", "INFORMATION · Version, platform and components", "INFO", "", "info"),
         ]
 
@@ -1240,7 +1241,14 @@ class SettingsScreen(Screen):
         elif index == 7 and button == "A":
             self.app.push(KeyboardScreen(self.app, "EDIT USER-AGENT", cfg.get("user_agent", ""),
                                          lambda value: cfg.set("user_agent", value)))
-        elif index == 8 and button == "A":
+        elif index == 8:
+            options = ["auto", "andromeda", "not_andromeda"]
+            old = cfg.get("muos_profile", "auto")
+            current = options.index(old) if old in options else 0
+            selected = options[(current + delta) % len(options)]
+            cfg.set("muos_profile", selected)
+            self.app.input.set_profile(selected)
+        elif index == 9 and button == "A":
             self.app.push(InfoScreen(self.app))
         self.menu.items = self.items()
 
@@ -1396,7 +1404,7 @@ class App:
         self.theme = Theme(self.cfg.get("theme_accent", "cyan"), self.cfg.get("ui_scale", 125))
         self.toast_ui = Toast(self.theme)
         self.player = Player(self.cfg)
-        self.input = InputReader()
+        self.input = InputReader(profile=self.cfg.get("muos_profile", "auto"))
         self.logos = LogoCache(self.cfg.get("user_agent", ""))
         self.playlist = None
         self.epg = epg_mod.EPG()
