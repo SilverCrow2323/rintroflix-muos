@@ -20,7 +20,7 @@ permissions:
 
 jobs:
   source-sanity:
-    name: Compile imported source
+    name: Compile complete application source
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -29,13 +29,19 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Compile imported Python modules
+      - name: Verify complete runtime entry points
+        run: |
+          test -f rintroflix/main.py
+          test -f rintroflix/ui.py
+          test -f rintroflix/player.py
+          test -f mux_launch.sh
+      - name: Compile Python application
         run: python -m compileall -q rintroflix
       - name: Validate shell scripts
         run: |
           bash -n mux_launch.sh
           bash -n lib/glyph_install.sh
-      - name: Verify required source paths are tracked
+      - name: Verify imported core modules
         run: |
           test -f rintroflix/config.py
           test -f rintroflix/net.py
@@ -46,4 +52,3 @@ jobs:
           test -f rintroflix/input.py
           test -f rintroflix/fbdisplay.py
           test -f rintroflix/logos.py
-          test -f mux_launch.sh
