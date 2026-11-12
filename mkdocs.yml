@@ -73,6 +73,7 @@ nav:
   - Engineering:
       - Architecture: architecture.md
       - Add-on SDK: addons.md
+      - Source Import Status: source-import.md
   - Project:
       - Roadmap: roadmap.md
       - Security: security.md
