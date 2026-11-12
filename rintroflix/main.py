@@ -1192,7 +1192,7 @@ class SettingsScreen(Screen):
             ("Stream buffer: %d sec" % cfg.get("player_cache_secs", 5), "PLAYBACK · Network cache, 0–30 seconds", "↔", "", "settings"),
             ("TV guide cache: %d hours" % cfg.get("epg_max_age_hours", 12), "SOURCES · XMLTV refresh interval, 1–48 hours", "↔", "", "guide"),
             ("User-Agent", cfg.get("user_agent", "")[:70], "A", "", "sources"),
-            ("muOS profile: %s" % self.app.input.profile.upper(), "SYSTEM · Auto / Andromeda (=) / Non-Andromeda (!=)", "↔", "", "settings"),
+            ("muOS profile: %s" % (self.app.input.profile.upper() + " → " + self.app.input.resolved_profile.upper()), "SYSTEM · Auto / Andromeda (=) / Non-Andromeda (!=)", "↔", "", "settings"),
             ("About RintrofliX", "INFORMATION · Version, platform and components", "INFO", "", "info"),
         ]
 
