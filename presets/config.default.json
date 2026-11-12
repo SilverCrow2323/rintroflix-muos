@@ -1,0 +1,20 @@
+{
+  "active_playlist": null,
+  "playlists": [],
+  "view_mode": "list",
+  "epg_manual_urls": [],
+  "epg_use_playlist_sources": true,
+  "epg_max_age_hours": 12,
+  "player_backend": "mpv",
+  "player_cache_secs": 5,
+  "user_agent": "RintrofliX/1.0 (muOS IPTV client)",
+  "favorites": [],
+  "last_group": "*",
+  "show_logos": true,
+  "theme_accent": "cyan",
+  "ui_scale": 125,
+  "rec_dir": "data/recordings",
+  "library_sources": [],
+  "enabled_addons": [],
+  "boot_animation": true
+}
