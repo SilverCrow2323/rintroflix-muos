@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.venv/
+venv/
+
+# MkDocs
+/site/
+
+# Local development
+.DS_Store
+Thumbs.db
+*.log
