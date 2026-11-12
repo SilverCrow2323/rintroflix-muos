@@ -55,8 +55,8 @@ DEFAULTS = {
     "muos_profile": "auto",  # auto | andromeda | not_andromeda
     "button_map": {
         "0": "A", "1": "B", "2": "X", "3": "Y",
-        "4": "L1", "5": "R1", "6": "SELECT", "7": "START",
-        "8": "L2", "9": "R2",
+        "4": "L1", "5": "R1", "6": "L2", "7": "R2",
+        "8": "SELECT", "9": "START", "10": "MENU", "11": "L3", "12": "R3",
     },
     "theme_accent": "cyan",
     "ui_scale": 125,
