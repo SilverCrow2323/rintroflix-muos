@@ -1422,10 +1422,26 @@ class App:
 
     def init_display(self):
         use_fb = os.environ.get("RINTROFLIX_FB") == "1"
+        pygame.font.init()
+        pygame.event.init()
+
+        # muOS handheld path: render to a software surface and copy frames
+        # directly to /dev/fb0. Do not require an SDL video driver.
+        if use_fb:
+            from rintroflix import fbdisplay
+            self.surface = pygame.Surface((W, H), depth=32)
+            if fbdisplay.attach(self.surface):
+                log("software framebuffer active: %s; SDL %s" %
+                    (fbdisplay.info(), pygame.get_sdl_version()))
+                return
+            reason = fbdisplay.last_error() or "unknown framebuffer error"
+            log("direct framebuffer unavailable: " + reason)
+
+        # Desktop/fallback path for environments with a working SDL backend.
         preferred = os.environ.get("RINTROFLIX_SDL_DRIVERS", "")
         drivers = [item.strip() for item in preferred.split(",") if item.strip()]
         if not drivers:
-            drivers = ["dummy", "fbcon", "kmsdrm", "wayland", "x11"] if use_fb else ["kmsdrm", "fbcon", "wayland", "x11", "dummy"]
+            drivers = ["kmsdrm", "fbcon", "wayland", "x11", "dummy"]
         errors = []
         self.surface = None
         active_driver = None
@@ -1446,19 +1462,11 @@ class App:
                 errors.append("%s: %s" % (driver, detail))
                 log("SDL video driver %s failed: %s" % (driver, detail))
         if self.surface is None:
-            raise RuntimeError("Unable to initialize SDL video. " + " | ".join(errors))
-        pygame.font.init()
-        pygame.event.init()
+            raise RuntimeError("Unable to initialize video. framebuffer=%s; SDL=%s" %
+                               (fbdisplay.last_error() if use_fb else "not requested", " | ".join(errors)))
         log("SDL video driver active: %s; SDL %s" % (active_driver, pygame.get_sdl_version()))
-        if use_fb and active_driver == "dummy":
-            from rintroflix import fbdisplay
-            if fbdisplay.attach(self.surface):
-                log("framebuffer attivo: " + fbdisplay.info())
-            else:
-                log("direct framebuffer unavailable; SDL dummy surface remains active")
         pygame.display.set_caption("RintrofliX")
         pygame.mouse.set_visible(False)
-
     def init_joysticks(self):
         pygame.joystick.init()
         self.joysticks = []
