@@ -2,6 +2,7 @@
 """Build a muOS .muxapp with all application files inside RintrofliX/."""
 from __future__ import annotations
 import argparse
+import stat
 from pathlib import Path
 import zipfile
 
