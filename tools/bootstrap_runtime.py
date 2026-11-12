@@ -56,7 +56,7 @@ def main():
     # A wheel contains native code: select only an exact interpreter ABI and CPU.
     context = ssl.create_default_context()
     opener = urllib.request.build_opener(urllib.request.HTTPSHandler(context=context))
-    opener.addheaders = [("User-Agent", "RintrofliX-muOS-runtime/2.6.1")]
+    opener.addheaders = [("User-Agent", "RintrofliX-muOS-runtime/2.6.3")]
     selected = None
     for package in ("pygame-ce", "pygame"):
         try:
@@ -105,11 +105,34 @@ def main():
         env = os.environ.copy()
         env["PYTHONPATH"] = staging
         env["PYGAME_HIDE_SUPPORT_PROMPT"] = "1"
-        check = subprocess.run([sys.executable, "-c", "import pygame; print(pygame.version.ver)"],
+        # Verify actual SDL video initialization, not just Python import.
+        smoke = """
+import os, sys, pygame
+print("pygame=" + str(pygame.version.ver))
+print("sdl=" + str(pygame.get_sdl_version()))
+errors = []
+for driver in ("dummy", "fbcon", "kmsdrm", "wayland", "x11"):
+    try:
+        pygame.display.quit()
+        os.environ["SDL_VIDEODRIVER"] = driver
+        pygame.display.init()
+        surface = pygame.display.set_mode((640, 480))
+        print("video_driver=" + driver)
+        print("surface=%sx%s" % surface.get_size())
+        pygame.display.quit()
+        sys.exit(0)
+    except Exception as exc:
+        errors.append("%s: %s" % (driver, str(exc) or repr(exc)))
+print("video_errors=" + " | ".join(errors))
+sys.exit(4)
+"""
+        check = subprocess.run([sys.executable, "-c", smoke],
                                env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                               universal_newlines=True, timeout=45)
+                               universal_newlines=True, timeout=60)
         if check.returncode:
-            raise RuntimeError("pygame import test failed: " + check.stderr[-1200:])
+            raise RuntimeError("pygame/SDL smoke test failed (rc=%s): %s %s" %
+                               (check.returncode, check.stdout[-1600:], check.stderr[-1600:]))
+        log("SDL display smoke test OK: " + check.stdout.strip().replace("\\n", "; "))
         shutil.rmtree(RUNTIME, ignore_errors=True)
         os.rename(staging, RUNTIME)
         with open(MARKER, "w") as marker:
