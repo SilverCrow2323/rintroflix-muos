@@ -12,7 +12,7 @@ DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 cd "$DIR" || exit 1
 mkdir -p "$DIR/data"
 LOG="$DIR/data/rintroflix-launch.log"
-echo "$(date) === RintrofliX 2.6.0 start ===" >>"$LOG"
+echo "$(date) === RintrofliX 2.6.1 start ===" >>"$LOG"
 
 # Fail visibly and leave a useful diagnostic instead of silently returning to
 # the muOS launcher when an incomplete package is installed.
