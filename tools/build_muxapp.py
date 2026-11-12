@@ -50,7 +50,8 @@ def main() -> int:
             seen.add(rel)
             info = zipfile.ZipInfo(rel)
             mode = path.stat().st_mode
-            info.external_attr = (stat.S_IFREG | stat.S_IMODE(mode)) << 16
+            permissions = 0o755 if rel == "mux_launch.sh" else stat.S_IMODE(mode)
+            info.external_attr = (stat.S_IFREG | permissions) << 16
             info.compress_type = zipfile.ZIP_DEFLATED
             archive.writestr(info, path.read_bytes())
     with zipfile.ZipFile(output) as archive:
