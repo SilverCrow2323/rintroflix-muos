@@ -30,7 +30,7 @@ The repository now has two independent workflows:
 - [Handbook build and deployment](https://github.com/SilverCrow2323/rintroflix-muos/actions/workflows/docs.yml) — MkDocs strict build and GitHub Pages deployment.
 - [Source sanity checks](https://github.com/SilverCrow2323/rintroflix-muos/actions/workflows/source-checks.yml) — Python bytecode compilation, shell syntax validation and required-path checks for the imported subset.
 
-The source sanity workflow passing does **not** mean the application is complete: it can only compile files that are currently present in the repository.
+The source sanity workflow passing does **not** mean the application is complete: it can only compile files that are currently present in the repository. The original project reference documents are also mirrored at the repository root (`ADDON_SDK.md`, `ARCHITECTURE.md`, `CHANGELOG.md`, `BUILD-REPORT.md`, `VERSION`).
 
 ## Remaining source assets and verification
 
@@ -38,7 +38,7 @@ The source sanity workflow passing does **not** mean the application is complete
 |---|---|
 | Cabin font files and font licence | ⏳ Pending |
 | App glyph and artwork | ⏳ Pending |
-| Add-on SDK and architecture source documents | ⏳ Pending |
+| Add-on SDK, architecture, changelog and build report | ✅ Imported |
 | Automated tests (tests/test_core.py) | ⏳ Pending |
 | Release builder (tools/build_release.py) | ⏳ Pending |
 | 2.6.0 .muxapp and source archive generation in CI | ⏳ Pending |
