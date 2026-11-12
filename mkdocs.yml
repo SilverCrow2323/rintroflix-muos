@@ -1,0 +1,79 @@
+site_name: RintrofliX
+site_description: A controller-first handheld media centre for muOS
+site_url: https://silvercrow2323.github.io/rintroflix-muos/
+repo_url: https://github.com/SilverCrow2323/rintroflix-muos
+repo_name: SilverCrow2323/rintroflix-muos
+edit_uri: edit/main/docs/
+copyright: Copyright &copy; RintrofliX contributors
+theme:
+  name: material
+  language: en
+  logo: assets/brand-mark.svg
+  favicon: assets/brand-mark.svg
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.footer
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - search.suggest
+    - search.highlight
+    - toc.follow
+  palette:
+    - scheme: slate
+      primary: deep purple
+      accent: cyan
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+    - scheme: default
+      primary: deep purple
+      accent: deep orange
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+  font:
+    text: Inter
+    code: JetBrains Mono
+extra_css:
+  - stylesheets/extra.css
+extra_javascript:
+  - javascripts/extra.js
+  - https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js
+plugins:
+  - search
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - footnotes
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+nav:
+  - Home: index.md
+  - Product:
+      - Features: features.md
+      - Installation & Controls: installation.md
+  - Engineering:
+      - Architecture: architecture.md
+      - Add-on SDK: addons.md
+  - Project:
+      - Roadmap: roadmap.md
+      - Security: security.md
+      - Changelog: changelog.md
