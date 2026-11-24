@@ -6,7 +6,7 @@ RintrofliX handles user-supplied playlist URLs, network responses, downloaded ar
 
 | Surface | Control | Limitation |
 |---|---|---|
-| HTTPS repository transport | TLS certificate validation plus final-URL HTTPS enforcement after redirects | Does not authenticate the repository publisher |
+| HTTPS repository transport | TLS certificate validation plus final-URL HTTPS enforcement after redirects; repository URLs with embedded credentials are refused | Does not authenticate the repository publisher |
 | Media network reads | Bounded HTTP(S) downloads | A trusted endpoint can still serve bad content |
 | Add-on archives | Path/type/size validation | Not a sandbox or malware scanner |
 | Add-on loading | Disabled until explicit enable | Enabled code runs with app permissions |
@@ -14,10 +14,10 @@ RintrofliX handles user-supplied playlist URLs, network responses, downloaded ar
 
 ## Trust model
 
-```mermaid
+\`\`\`mermaid
 flowchart TD
     A[Repository URL] --> B[HTTPS transport]
-    B --> C{Final URL still HTTPS?}
+    B --> C{Final URL still HTTPS and credential-free?}
     C -- No --> X[Reject redirect]
     C -- Yes --> D[Parse bounded index]
     D --> E[Read package URL + SHA-256]
@@ -28,9 +28,9 @@ flowchart TD
     I --> J[Install disabled]
     J --> K[User explicitly enables]
     K --> L[Python code runs with app permissions]
-```
+\`\`\`
 
-The repository client asks the built-in downloader to enforce HTTPS on both the requested URL and the final URL returned after urllib follows redirects. A repository index or package endpoint that redirects to plain HTTP is rejected. This strict option is limited to repository downloads: ordinary IPTV/media URLs continue to support HTTP where a user-supplied source requires it.
+The repository client asks the built-in downloader to enforce HTTPS on both the requested URL and the final URL returned after urllib follows redirects. A repository index or package endpoint that redirects to plain HTTP, omits a hostname or embeds URL credentials is rejected before its response body is accepted. This strict option is limited to repository downloads: ordinary IPTV/media URLs continue to support HTTP where a user-supplied source requires it.
 
 ## Safe-use guidance
 
