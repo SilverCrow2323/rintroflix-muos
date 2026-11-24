@@ -39,6 +39,12 @@ class HttpsRedirectTests(unittest.TestCase):
         )
 
     @patch("rintroflix.net.urllib.request.urlopen")
+    def test_rejects_final_https_url_with_embedded_credentials(self, open_url):
+        open_url.return_value = FakeResponse("https://user:secret@cdn.example/addons.json")
+        with self.assertRaisesRegex(ValueError, "redirect refused"):
+            fetch_bytes("https://repo.example/addons.json", max_bytes=16, require_https=True)
+
+    @patch("rintroflix.net.urllib.request.urlopen")
     def test_http_media_sources_remain_supported_by_default(self, open_url):
         open_url.return_value = FakeResponse("http://media.example/live.m3u", b"#EXTM3U")
         self.assertEqual(fetch_bytes("http://media.example/live.m3u"), b"#EXTM3U")
@@ -46,6 +52,14 @@ class HttpsRedirectTests(unittest.TestCase):
     def test_https_only_mode_rejects_initial_http_url(self):
         with self.assertRaisesRegex(ValueError, "HTTPS is required"):
             fetch_bytes("http://repo.example/addons.json", require_https=True)
+
+    def test_https_only_mode_rejects_initial_url_with_credentials(self):
+        with self.assertRaisesRegex(ValueError, "HTTPS is required"):
+            fetch_bytes("https://user:secret@repo.example/addons.json", require_https=True)
+
+    def test_https_only_mode_rejects_missing_host(self):
+        with self.assertRaisesRegex(ValueError, "HTTPS is required"):
+            fetch_bytes("https:///addons.json", require_https=True)
 
 
 if __name__ == "__main__":
