@@ -8,14 +8,17 @@ Security hardening for add-on repository downloads, regression coverage for repo
 
 - Keep repository index and package downloads HTTPS-only after redirect resolution; reject an HTTP final URL.
 - Preserve ordinary HTTP support for user-configured IPTV/media sources.
-- Add host-side regression tests for redirect handling, repository index validation, package digest verification and package identity checks.
-- Run the regression suite in both the source-check and package-build workflows.
+- Add 12 host-side regression tests for redirect handling, repository index validation, package digest verification, and package identity checks.
+- Run the regression suite in both source-check and MUX package CI.
 - Derive the package builder default output filename from the tracked VERSION file.
+- Align the build workflow upload path with the versioned 2.6.5 output filename.
 
-## Verification status
+## Verification
 
-- Source changes and test cases are committed to the candidate branch.
-- GitHub Actions has not yet reported a result for this candidate at the time this report was prepared.
+- Source-check run [#45326736972](https://github.com/SilverCrow2323/rintroflix-muos/actions/runs/45326736972): passed Python compilation, 12 unit tests and shell syntax checks.
+- Package run [#45326764767](https://github.com/SilverCrow2323/rintroflix-muos/actions/runs/45326764767): passed source validation, all 12 tests, MUX package construction and artifact upload.
+- Built package: 65,679 bytes, 25 files.
+- GitHub Actions artifact: [RintrofliX-2.6.5-muOS](https://github.com/SilverCrow2323/rintroflix-muos/actions/runs/45326764767/artifacts/14889059983), artifact ID 14889059983. This is a retained CI artifact, not a published GitHub Release.
 - Physical RG35XX H/H700 installation, controller mapping, display, playback and extended stability remain unverified.
 
 ## Security boundary
