@@ -13,13 +13,18 @@ MAX_INDEX_BYTES = 1024 * 1024
 MAX_PACKAGE_BYTES = 12 * 1024 * 1024
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
+
 class RepositoryError(ValueError):
     pass
+
 
 class RepositoryClient:
     def __init__(self, addon_manager, fetcher=None):
         self.manager = addon_manager
         self.fetcher = fetcher or fetch_bytes
+        # The built-in downloader can inspect the final URL after urllib follows
+        # redirects. Custom test/embedding fetchers keep their existing contract.
+        self._enforce_https_redirects = self.fetcher is fetch_bytes
 
     @staticmethod
     def _https(url):
@@ -28,10 +33,15 @@ class RepositoryClient:
             raise RepositoryError("Repository and package URLs must use HTTPS")
         return url
 
+    def _fetch(self, url, max_bytes):
+        if self._enforce_https_redirects:
+            return self.fetcher(url, max_bytes=max_bytes, require_https=True)
+        return self.fetcher(url, max_bytes=max_bytes)
+
     def load_index(self, index_url):
         index_url = self._https(index_url)
         try:
-            raw = self.fetcher(index_url, max_bytes=MAX_INDEX_BYTES)
+            raw = self._fetch(index_url, MAX_INDEX_BYTES)
             data = json.loads(raw.decode("utf-8-sig"))
         except RepositoryError:
             raise
@@ -64,7 +74,7 @@ class RepositoryClient:
         if not _SHA256.fullmatch(expected):
             raise RepositoryError("Missing or invalid package digest")
         try:
-            payload = self.fetcher(package_url, max_bytes=MAX_PACKAGE_BYTES)
+            payload = self._fetch(package_url, MAX_PACKAGE_BYTES)
         except Exception as exc:
             raise RepositoryError("Package download failed: %s" % str(exc)[:100])
         actual = hashlib.sha256(payload).hexdigest()
