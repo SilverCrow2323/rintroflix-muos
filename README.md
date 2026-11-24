@@ -8,13 +8,13 @@
 <p align="center"><strong>A controller-first handheld media centre for muOS.</strong></p>
 <p align="center">
   <a href="https://github.com/SilverCrow2323/rintroflix-muos/actions"><img alt="Build" src="https://img.shields.io/github/actions/workflow/status/SilverCrow2323/rintroflix-muos/docs.yml?branch=main&label=docs"></a>
-  <img alt="Version" src="https://img.shields.io/badge/version-2.6.0-8b5cf6">
+  <img alt="Version" src="https://img.shields.io/badge/version-2.6.5-8b5cf6">
   <img alt="Platform" src="https://img.shields.io/badge/platform-muOS%20%7C%20H700-06b6d4">
   <img alt="License" src="https://img.shields.io/badge/license-TBD-orange">
 </p>
 
 > [!IMPORTANT]
-> The canonical repository is being populated from the verified RintrofliX 2.6.0 working tree. Documentation and a first source subset are committed. The source mirror is **not yet complete**: core UI/player modules, artwork/fonts, tests and the release builder still need to be imported before this repository can produce a full application package.
+> The repository now tracks the core Python UI/player modules, media/add-on services, muOS launcher and MUX package builder. The **2.6.5 candidate** hardens HTTPS repository redirects and adds host-side regression tests. The full source mirror is still incomplete: runtime fonts, device glyphs and the complete artwork bundle are not yet present. Physical RG35XX H/H700 validation remains pending.
 
 ## ✨ What is RintrofliX?
 
@@ -45,13 +45,13 @@ The documentation is a living website, not a static wall of text:
 
 | Area | Baseline |
 |---|---|
-| Application reference version | 2.6.0 |
+| Application version | 2.6.4 on main; 2.6.5 candidate on the upgrade branch |
 | Add-on API | v1 actions + v2 source providers/playback hook |
-| Repository service | HTTPS index + SHA-256 package integrity |
+| Repository service | Bounded HTTPS index/package downloads, redirect downgrade rejection and SHA-256 integrity |
 | Publisher signatures | Not implemented |
-| Working-tree tests | 22 passed in the 2.6.0 baseline; CI rerun pending |
+| Regression tests | 12 standard-library tests passed in PR CI run #45326764767 |
 | Device validation | Pending physical RG35XX H / muOS testing |
-| GitHub source mirror | Partial import; not a complete build tree |
+| GitHub source mirror | Core modules and package builder tracked; runtime font/glyph/artwork assets remain incomplete |
 
 **Important:** SHA-256 verifies that downloaded bytes match the repository index. It does not prove who published that index. Do not treat unsigned repositories as authenticated publishers.
 

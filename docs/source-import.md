@@ -1,13 +1,15 @@
 # Source import status
 
 > [!WARNING]
-> This repository is not yet a complete application source mirror. Do not use the current main branch as a release/build source until every required runtime file and the release verification suite have been imported and CI is green.
+> The repository now contains the core Python application modules, muOS launcher, add-on services and a MUX package builder. It is still an incomplete mirror of the full working application: runtime artwork/font/glyph assets are not present in the tracked tree, and automated coverage is being rebuilt. Do not treat a green source compile as device certification.
 
-## Imported modules
+## Imported runtime and tooling
 
 | Path | Status | Responsibility |
 |---|---|---|
-| rintroflix/__init__.py | ✅ Imported | Package version |
+| rintroflix/main.py | ✅ Imported | Main application and screen workflows |
+| rintroflix/ui.py | ✅ Imported | Pygame interface, drawing primitives and focus states |
+| rintroflix/player.py | ✅ Imported | MPV IPC, playback OSD and controls |
 | rintroflix/config.py | ✅ Imported | Persistent settings and VoidCast migration |
 | rintroflix/net.py | ✅ Imported | Bounded HTTP(S) downloads and cache |
 | rintroflix/input.py | ✅ Imported | muOS evdev controller input |
@@ -16,42 +18,42 @@
 | rintroflix/addons.py | ✅ Imported | Add-on API v1/v2, validation and lifecycle |
 | rintroflix/repository.py | ✅ Imported | HTTPS index and SHA-256 package verification |
 | rintroflix/fbdisplay.py | ✅ Imported | Optional framebuffer presentation |
-| lib/glyph_install.sh | ✅ Imported | muOS theme glyph installation |
-| mux_launch.sh | ⚠️ Imported; review required | muOS launcher and runtime discovery |
-| rintroflix/main.py | ⏳ Pending | Main application and screen workflows |
-| rintroflix/ui.py | ⏳ Pending | Pygame interface |
-| rintroflix/player.py | ⏳ Pending | MPV IPC, playback OSD and controls |
 | rintroflix/logos.py | ✅ Imported | Asynchronous channel-logo cache |
+| lib/glyph_install.sh | ✅ Imported | muOS theme glyph installation helper |
+| mux_launch.sh | ✅ Imported | muOS launcher and runtime discovery |
+| tools/bootstrap_runtime.py | ✅ Imported | Runtime bootstrap helper |
+| tools/build_muxapp.py | ✅ Imported | Installable muOS MUX package builder |
 
-## Automated checks
+## Regression coverage
 
-The repository now has two independent workflows:
+The 2.6.5 candidate adds a standard-library unittest suite under tests/:
 
-- [Handbook build and deployment](https://github.com/SilverCrow2323/rintroflix-muos/actions/workflows/docs.yml) — MkDocs strict build and GitHub Pages deployment.
-- [Source sanity checks](https://github.com/SilverCrow2323/rintroflix-muos/actions/workflows/source-checks.yml) — Python bytecode compilation, shell syntax validation and required-path checks for the imported subset.
+- tests/test_net.py — HTTPS redirect downgrade rejection, normal HTTPS redirects, and preservation of ordinary HTTP media support.
+- tests/test_repository.py — HTTPS URL validation, relative package URL resolution, duplicate-ID and digest validation, digest mismatch refusal, and package identity handling.
 
-The source sanity workflow passing does **not** mean the application is complete: it can only compile files that are currently present in the repository. The original project reference documents are also mirrored at the repository root (`ADDON_SDK.md`, `ARCHITECTURE.md`, `CHANGELOG.md`, `BUILD-REPORT.md`, `VERSION`).
+GitHub Actions passed the suite alongside Python compilation and shell syntax checks. PR run #45326764767 also built a 65,679-byte, 25-file MUX package and uploaded artifact ID 14889059983. These are host-side checks; they do not prove muOS rendering, controller mappings, playback or long-session stability.
 
-## Remaining source assets and verification
+## Remaining source and release gates
 
 | Item | Status |
 |---|---|
-| Cabin font files and font licence | ⏳ Pending |
-| App glyph and artwork | ⏳ Pending |
-| Add-on SDK, architecture, changelog and build report | ✅ Imported |
-| Automated tests (tests/test_core.py) | ⏳ Pending |
-| Release builder (tools/build_release.py) | ⏳ Pending |
-| 2.6.0 .muxapp and source archive generation in CI | ⏳ Pending |
-| Device validation on RG35XX H / H700 | ⏳ Not run in this environment |
+| Core Python UI/player and service modules | ✅ Tracked |
+| muOS launcher and MUX package builder | ✅ Tracked |
+| Standard-library repository/network regression tests | ✅ 12 tests passed in PR CI run #45326764767 |
+| Runtime font files and associated font licence | ⏳ Not present in the tracked tree |
+| Device-app glyph and full runtime artwork bundle | ⏳ Not present in the tracked tree; docs brand mark is not a device asset pack |
+| Full package-content/asset verification | ⏳ Needs dedicated packaging assertions |
+| Physical RG35XX H / H700 validation | ⏳ Not run in this environment |
+| Signed repository metadata / publisher identity | ⏳ Future security milestone |
 
-## Import rules
+## Import and release rules
 
-- Keep the known personal playlist URL out of source, fixtures, logs and release artifacts.
+- Keep private playlist URLs out of source, fixtures, logs and release artifacts.
 - Keep TLS certificate verification enabled.
 - Treat add-ons as trusted Python code, not sandboxed extensions.
-- A repository package digest checks integrity against its index; it does not authenticate the publisher.
-- Do not publish a release from a partial source tree.
+- A package digest checks integrity against its index; it does not authenticate the publisher.
+- Do not publish a release from an incomplete asset tree or without physical-device acceptance.
 
 ## Next integration milestone
 
-Import the remaining UI/player modules and assets, then add the complete test suite and release builder. Only after that should CI run Python compilation, unit tests, shell validation, archive CRC/content checks and the private-URL scan before producing a .muxapp.
+Complete the runtime font/glyph/artwork import with licence provenance, add package-content assertions for every required runtime asset, then validate installation, display, input and playback on a physical RG35XX H/H700 running the documented muOS version.

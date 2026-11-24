@@ -8,6 +8,8 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 APP_DIR = "RintrofliX"
+VERSION_FILE = ROOT / "VERSION"
+APP_VERSION = VERSION_FILE.read_text(encoding="utf-8").strip().split()[-1]
 INCLUDE_FILES = (
     "mux_launch.sh", "mux_lang.ini", "VERSION", "README.md",
     "ARCHITECTURE.md", "CHANGELOG.md", "ADDON_SDK.md",
@@ -16,7 +18,7 @@ INCLUDE_DIRS = ("rintroflix", "lib", "tools", "presets", "resources", "glyph", "
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--output", default="dist/RintrofliX-2.6.3.muxapp")
+    parser.add_argument("--output", default="dist/RintrofliX-%s.muxapp" % APP_VERSION)
     args = parser.parse_args()
     output = (ROOT / args.output).resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
