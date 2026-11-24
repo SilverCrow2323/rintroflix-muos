@@ -1,6 +1,7 @@
 import hashlib
 import json
 import unittest
+from unittest.mock import patch
 
 from rintroflix.repository import RepositoryClient, RepositoryError
 
@@ -74,6 +75,18 @@ class RepositoryClientTests(unittest.TestCase):
         self.assertEqual(client.install(entry), self.manager.manifest)
         self.assertEqual(self.manager.installed, [self.package])
         self.assertEqual(self.manager.removed, [])
+
+
+    @patch("rintroflix.repository.fetch_bytes")
+    def test_builtin_fetcher_enables_https_redirect_guard(self, fetch):
+        fetch.return_value = b"index"
+        client = RepositoryClient(self.manager)
+        self.assertEqual(client._fetch("https://repo.example/index.json", 321), b"index")
+        fetch.assert_called_once_with(
+            "https://repo.example/index.json",
+            max_bytes=321,
+            require_https=True,
+        )
 
     def test_index_identity_mismatch_is_removed(self):
         self.manager.manifest = {"id": "unexpected-addon", "version": "1.2.0"}
