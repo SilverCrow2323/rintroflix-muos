@@ -1,3 +1,11 @@
+## 2.6.5 — HTTPS repository redirect hardening
+
+- Reject repository index and package downloads when an HTTPS request resolves through a redirect to a non-HTTPS final URL.
+- Keep the strict redirect check scoped to repository traffic; ordinary user-configured HTTP media sources remain supported.
+- Add standard-library regression coverage for transport redirects, repository index validation, duplicate IDs, package digest mismatch and package identity checks.
+- Run the regression suite in source and package CI workflows.
+- Derive the MUX builder default artifact version from the tracked VERSION file.
+
 # Changelog
 
 ## 2.0.0 — Handheld Media Centre
