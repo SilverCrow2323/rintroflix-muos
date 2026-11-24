@@ -10,17 +10,38 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+from urllib.parse import urlparse
 
 MAX_DOWNLOAD = 64 * 1024 * 1024
 
 
-def fetch_bytes(url, user_agent=None, timeout=18, max_bytes=MAX_DOWNLOAD):
+def _is_https_url(url):
+    """Return whether a URL is HTTPS with a real host and no embedded credentials."""
+    parsed = urlparse(str(url or ""))
+    return (
+        parsed.scheme.lower() == "https"
+        and bool(parsed.hostname)
+        and parsed.username is None
+        and parsed.password is None
+    )
+
+
+def fetch_bytes(url, user_agent=None, timeout=18, max_bytes=MAX_DOWNLOAD,
+                require_https=False):
     if not isinstance(url, str) or not url.startswith(("http://", "https://")):
         raise ValueError("Only HTTP(S) URLs are supported.")
+    if require_https and not _is_https_url(url):
+        raise ValueError("HTTPS is required for this download.")
+
     headers = {"User-Agent": user_agent or "RintrofliX/1.0"}
     req = urllib.request.Request(url, headers=headers)
     # urllib uses the system CA store and verifies TLS certificates by default.
     with urllib.request.urlopen(req, timeout=timeout) as response:
+        # urllib follows redirects automatically. Check the final URL before
+        # accepting bytes, otherwise an HTTPS repository can silently downgrade
+        # its index or package request to plain HTTP.
+        if require_https and not _is_https_url(response.geturl()):
+            raise ValueError("HTTPS redirect refused; repository downloads must remain on HTTPS.")
         length = response.headers.get("Content-Length")
         if length and int(length) > max_bytes:
             raise ValueError("Resource too large (limit %d MB)." % (max_bytes // 1048576))
