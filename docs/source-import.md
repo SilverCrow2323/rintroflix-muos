@@ -31,7 +31,7 @@ The 2.6.5 candidate adds a standard-library unittest suite under tests/:
 - tests/test_net.py — HTTPS redirect downgrade rejection, normal HTTPS redirects, and preservation of ordinary HTTP media support.
 - tests/test_repository.py — HTTPS URL validation, relative package URL resolution, duplicate-ID and digest validation, digest mismatch refusal, and package identity handling.
 
-GitHub Actions runs the suite alongside Python compilation, shell syntax checks and package construction. The tests are host-side checks; they do not prove muOS rendering, controller mappings, playback or long-session stability.
+GitHub Actions passed the suite alongside Python compilation and shell syntax checks. PR run #45326764767 also built a 65,679-byte, 25-file MUX package and uploaded artifact ID 14889059983. These are host-side checks; they do not prove muOS rendering, controller mappings, playback or long-session stability.
 
 ## Remaining source and release gates
 
@@ -39,7 +39,7 @@ GitHub Actions runs the suite alongside Python compilation, shell syntax checks 
 |---|---|
 | Core Python UI/player and service modules | ✅ Tracked |
 | muOS launcher and MUX package builder | ✅ Tracked |
-| Standard-library repository/network regression tests | ✅ Added in 2.6.5 candidate; CI result pending |
+| Standard-library repository/network regression tests | ✅ 12 tests passed in PR CI run #45326764767 |
 | Runtime font files and associated font licence | ⏳ Not present in the tracked tree |
 | Device-app glyph and full runtime artwork bundle | ⏳ Not present in the tracked tree; docs brand mark is not a device asset pack |
 | Full package-content/asset verification | ⏳ Needs dedicated packaging assertions |
