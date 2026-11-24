@@ -49,7 +49,7 @@ The documentation is a living website, not a static wall of text:
 | Add-on API | v1 actions + v2 source providers/playback hook |
 | Repository service | Bounded HTTPS index/package downloads, redirect downgrade rejection and SHA-256 integrity |
 | Publisher signatures | Not implemented |
-| Regression tests | 11 standard-library tests added in the 2.6.5 candidate; CI result pending |
+| Regression tests | 12 standard-library tests added in the 2.6.5 candidate; CI result pending |
 | Device validation | Pending physical RG35XX H / muOS testing |
 | GitHub source mirror | Core modules and package builder tracked; runtime font/glyph/artwork assets remain incomplete |
 
