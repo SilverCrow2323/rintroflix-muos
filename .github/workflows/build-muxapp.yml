@@ -14,6 +14,18 @@ on:
       - "mux_lang.ini"
       - "VERSION"
       - ".github/workflows/build-muxapp.yml"
+  pull_request:
+    paths:
+      - "rintroflix/**"
+      - "tests/**"
+      - "lib/**"
+      - "tools/**"
+      - "presets/**"
+      - "resources/**"
+      - "mux_launch.sh"
+      - "mux_lang.ini"
+      - "VERSION"
+      - ".github/workflows/build-muxapp.yml"
   workflow_dispatch:
 
 permissions:
