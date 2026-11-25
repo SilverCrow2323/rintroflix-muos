@@ -84,13 +84,14 @@ class XmltvParserTests(unittest.TestCase):
             for event, element in original_iterparse(source, events=events):
                 if event == "start":
                     stack.append(element)
-                else:
-                    parent = stack[-2] if len(stack) > 1 else None
                     yield event, element
-                    if element.tag.rsplit("}", 1)[-1] in ("channel", "programme") and parent is not None:
-                        detached.append(element not in list(parent))
-                    if stack:
-                        stack.pop()
+                    continue
+                parent = stack[-2] if len(stack) > 1 else None
+                yield event, element
+                if element.tag.rsplit("}", 1)[-1] in ("channel", "programme") and parent is not None:
+                    detached.append(element not in list(parent))
+                if stack:
+                    stack.pop()
 
         epg = EPG()
         with patch("rintroflix.epg.ET.iterparse", side_effect=tracking_iterparse):
