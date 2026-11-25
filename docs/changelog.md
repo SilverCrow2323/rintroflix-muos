@@ -1,5 +1,11 @@
 # Changelog 📦
 
+## Unreleased
+
+- Detach completed XMLTV channel and programme nodes during streaming parsing so large guides do not retain cleared element shells under the root node.
+- Add a regression test that observes channel/programme detachment while preserving transactional source commits.
+
+
 This page summarises the documented application baseline. It is not a substitute for release artifacts or commit history.
 
 ## 2.6.0 — Repository service foundation
