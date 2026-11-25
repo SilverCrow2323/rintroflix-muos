@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import re
 import time
 import unicodedata
 import xml.etree.ElementTree as ET
@@ -23,20 +24,36 @@ def _parse_xmltv_time(value):
     if not value:
         return None
     bits = value.strip().split()
-    raw = bits[0][:14].ljust(14, "0")
+    if len(bits) not in (1, 2) or not re.fullmatch(r"\d{14}", bits[0]):
+        return None
     try:
-        dt = datetime.strptime(raw, "%Y%m%d%H%M%S")
+        dt = datetime.strptime(bits[0], "%Y%m%d%H%M%S")
     except ValueError:
         return None
+
     offset = timedelta(0)
-    if len(bits) > 1 and len(bits[1]) == 5 and bits[1][0] in "+-":
-        try:
-            offset = timedelta(hours=int(bits[1][1:3]), minutes=int(bits[1][3:5]))
-            if bits[1][0] == "-":
-                offset = -offset
-        except ValueError:
-            pass
+    if len(bits) == 2:
+        zone = bits[1]
+        if not re.fullmatch(r"[+-]\d{4}", zone):
+            return None
+        hours, minutes = int(zone[1:3]), int(zone[3:5])
+        if hours > 14 or minutes > 59 or (hours == 14 and minutes != 0):
+            return None
+        offset = timedelta(hours=hours, minutes=minutes)
+        if zone[0] == "-":
+            offset = -offset
     return (dt - offset).replace(tzinfo=timezone.utc).timestamp()
+
+
+def _local_name(element):
+    return element.tag.rsplit("}", 1)[-1]
+
+
+def _child_text(element, wanted):
+    for child in element:
+        if _local_name(child) == wanted:
+            return (child.text or "").strip()
+    return ""
 
 
 @dataclass
@@ -70,29 +87,44 @@ class EPG:
 
     def _parse(self, data):
         channel_names = {}
+        parsed = {}
         for _event, element in ET.iterparse(io.BytesIO(data), events=("end",)):
-            tag = element.tag.rsplit("}", 1)[-1]
+            tag = _local_name(element)
             if tag == "channel":
                 channel_id = (element.get("id") or "").strip()
-                names = [x.text.strip() for x in element.findall("display-name") if x.text]
+                names = [
+                    (child.text or "").strip()
+                    for child in element
+                    if _local_name(child) == "display-name" and (child.text or "").strip()
+                ]
                 if channel_id:
                     channel_names[channel_id] = names
                 element.clear()
             elif tag == "programme":
                 channel_id = (element.get("channel") or "").strip()
                 start = _parse_xmltv_time(element.get("start"))
-                stop = _parse_xmltv_time(element.get("stop"))
-                title_el = element.find("title")
-                desc_el = element.find("desc")
-                title = (title_el.text or "").strip() if title_el is not None else ""
-                desc = (desc_el.text or "").strip() if desc_el is not None else ""
-                if channel_id and start is not None:
-                    item = Programme(start, stop or start + 1800, title or "Programme", desc)
+                stop_value = element.get("stop")
+                stop = _parse_xmltv_time(stop_value) if stop_value else None
+                if stop_value and stop is None:
+                    element.clear()
+                    continue
+                if channel_id and start is not None and (stop is None or stop > start):
+                    item = Programme(
+                        start,
+                        stop if stop is not None else start + 1800,
+                        _child_text(element, "title") or "Programme",
+                        _child_text(element, "desc"),
+                    )
                     keys = {_norm(channel_id)} | {_norm(x) for x in channel_names.get(channel_id, [])}
                     for key in keys:
                         if key:
-                            self.by_key.setdefault(key, []).append(item)
+                            parsed.setdefault(key, []).append(item)
                 element.clear()
+
+        # Commit this source only after the complete XML document parsed.
+        # A truncated/malformed source must not leak partial programmes.
+        for key, items in parsed.items():
+            self.by_key.setdefault(key, []).extend(items)
 
     def programmes_for(self, channel):
         for key in channel.epg_keys():
