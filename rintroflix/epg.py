@@ -88,38 +88,61 @@ class EPG:
     def _parse(self, data):
         channel_names = {}
         parsed = {}
-        for _event, element in ET.iterparse(io.BytesIO(data), events=("end",)):
+        stack = []
+        for event, element in ET.iterparse(io.BytesIO(data), events=("start", "end")):
+            if event == "start":
+                stack.append(element)
+                continue
+
             tag = _local_name(element)
-            if tag == "channel":
-                channel_id = (element.get("id") or "").strip()
-                names = [
-                    (child.text or "").strip()
-                    for child in element
-                    if _local_name(child) == "display-name" and (child.text or "").strip()
-                ]
-                if channel_id:
-                    channel_names[channel_id] = names
-                element.clear()
-            elif tag == "programme":
-                channel_id = (element.get("channel") or "").strip()
-                start = _parse_xmltv_time(element.get("start"))
-                stop_value = element.get("stop")
-                stop = _parse_xmltv_time(stop_value) if stop_value else None
-                if stop_value and stop is None:
+            try:
+                if tag == "channel":
+                    channel_id = (element.get("id") or "").strip()
+                    names = [
+                        (child.text or "").strip()
+                        for child in element
+                        if _local_name(child) == "display-name" and (child.text or "").strip()
+                    ]
+                    if channel_id:
+                        channel_names[channel_id] = names
+                elif tag == "programme":
+                    channel_id = (element.get("channel") or "").strip()
+                    start = _parse_xmltv_time(element.get("start"))
+                    stop_value = element.get("stop")
+                    stop = _parse_xmltv_time(stop_value) if stop_value else None
+                    invalid_stop = bool(stop_value) and stop is None
+                    if (
+                        not invalid_stop
+                        and channel_id
+                        and start is not None
+                        and (stop is None or stop > start)
+                    ):
+                        item = Programme(
+                            start,
+                            stop if stop is not None else start + 1800,
+                            _child_text(element, "title") or "Programme",
+                            _child_text(element, "desc"),
+                        )
+                        keys = {_norm(channel_id)} | {
+                            _norm(x) for x in channel_names.get(channel_id, [])
+                        }
+                        for key in keys:
+                            if key:
+                                parsed.setdefault(key, []).append(item)
+            finally:
+                # Element.clear() releases descendants but leaves an empty node
+                # attached to the <tv> root. Detach completed top-level records
+                # as well, so long guides do not retain one node per programme.
+                if tag in ("channel", "programme"):
                     element.clear()
-                    continue
-                if channel_id and start is not None and (stop is None or stop > start):
-                    item = Programme(
-                        start,
-                        stop if stop is not None else start + 1800,
-                        _child_text(element, "title") or "Programme",
-                        _child_text(element, "desc"),
-                    )
-                    keys = {_norm(channel_id)} | {_norm(x) for x in channel_names.get(channel_id, [])}
-                    for key in keys:
-                        if key:
-                            parsed.setdefault(key, []).append(item)
-                element.clear()
+                    if len(stack) > 1:
+                        parent = stack[-2]
+                        try:
+                            parent.remove(element)
+                        except ValueError:
+                            pass
+                if stack:
+                    stack.pop()
 
         # Commit this source only after the complete XML document parsed.
         # A truncated/malformed source must not leak partial programmes.
