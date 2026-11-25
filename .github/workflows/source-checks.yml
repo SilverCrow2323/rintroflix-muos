@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - "rintroflix/**"
+      - "tests/**"
       - "lib/**"
       - "mux_launch.sh"
       - ".github/workflows/source-checks.yml"
@@ -52,3 +53,5 @@ jobs:
           test -f rintroflix/input.py
           test -f rintroflix/fbdisplay.py
           test -f rintroflix/logos.py
+      - name: Run XMLTV parser regression tests
+        run: python -m unittest discover -s tests -v
