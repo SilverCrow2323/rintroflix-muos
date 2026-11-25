@@ -1,5 +1,6 @@
 import unittest
 import xml.etree.ElementTree as ET
+from unittest.mock import patch
 from datetime import datetime, timezone
 
 from rintroflix.epg import EPG, _parse_xmltv_time
@@ -68,6 +69,36 @@ class XmltvParserTests(unittest.TestCase):
         epg = EPG()
         epg._parse(payload)
         self.assertEqual(epg.by_key["x"][0].stop - epg.by_key["x"][0].start, 1800)
+
+    def test_streaming_parser_detaches_completed_channel_and_programme_nodes(self):
+        payload = b"""<tv>
+          <channel id="x"><display-name>Channel X</display-name></channel>
+          <programme channel="x" start="20261125110000"><title>One</title></programme>
+          <programme channel="x" start="20261125113000"><title>Two</title></programme>
+        </tv>"""
+        original_iterparse = ET.iterparse
+        detached = []
+
+        def tracking_iterparse(source, events):
+            stack = []
+            for event, element in original_iterparse(source, events=events):
+                if event == "start":
+                    stack.append(element)
+                else:
+                    parent = stack[-2] if len(stack) > 1 else None
+                    yield event, element
+                    if element.tag.rsplit("}", 1)[-1] in ("channel", "programme") and parent is not None:
+                        detached.append(element not in list(parent))
+                    if stack:
+                        stack.pop()
+
+        epg = EPG()
+        with patch("rintroflix.epg.ET.iterparse", side_effect=tracking_iterparse):
+            epg._parse(payload)
+
+        self.assertEqual(len(epg.by_key["x"]), 2)
+        self.assertEqual(len(detached), 3)
+        self.assertTrue(all(detached))
 
     def test_malformed_source_does_not_partially_mutate_existing_index(self):
         epg = EPG()
