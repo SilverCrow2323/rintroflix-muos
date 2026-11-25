@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Added namespace-aware XMLTV channel/programme parsing.
+- Reject malformed/out-of-range timezone offsets and invalid programme stop times instead of silently treating them as UTC or inventing a duration.
+- Parse each EPG source transactionally so malformed/truncated XML cannot leave partial programme records in the live index.
+- Added standard-library regression tests and wired them into source-check CI.
+
 ## 2.0.0 — Handheld Media Centre
 
 - Rebuilt the interface around a Kodi-inspired handheld media-centre layout.
