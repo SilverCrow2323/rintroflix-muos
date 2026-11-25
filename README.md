@@ -55,6 +55,10 @@ The documentation is a living website, not a static wall of text:
 
 **Important:** SHA-256 verifies that downloaded bytes match the repository index. It does not prove who published that index. Do not treat unsigned repositories as authenticated publishers.
 
+## XMLTV compatibility and validation
+
+The EPG parser accepts ordinary and default-namespaced XMLTV documents. Timezone offsets are validated before conversion to UTC; malformed offsets and non-positive programme intervals are ignored rather than silently reinterpreted. Each source is parsed into a temporary index and committed only after the complete XML document succeeds, preventing truncated feeds from leaking partial data into the guide.
+
 ## 🌈 Documentation
 
 Built with [MkDocs Material](https://squidfunk.github.io/mkdocs-material/), Mermaid diagrams, responsive tables, callouts, charts and a custom visual theme. All product documentation is written in English.
