@@ -304,6 +304,7 @@ class AddonManager:
                 if expanded > MAX_EXPANDED_BYTES:
                     raise AddonError("Expanded package exceeds 24 MB")
                 seen = set()
+                actual_expanded = 0
                 for info in members:
                     name = info.filename
                     if not name or "\\" in name or len(name.encode("utf-8")) > MAX_MEMBER_PATH_BYTES:
@@ -341,8 +342,19 @@ class AddonManager:
                     if target.suffix.lower() not in (".py", ".json", ".md", ".txt", ".png", ".jpg", ".jpeg", ".svg"):
                         raise AddonError("Unsupported file type in add-on: " + target.suffix)
                     target.parent.mkdir(parents=True, exist_ok=True)
+                    member_bytes = 0
                     with archive.open(info) as src, target.open("wb") as dst:
-                        shutil.copyfileobj(src, dst)
+                        while True:
+                            chunk = src.read(64 * 1024)
+                            if not chunk:
+                                break
+                            member_bytes += len(chunk)
+                            actual_expanded += len(chunk)
+                            if member_bytes > info.file_size or actual_expanded > MAX_EXPANDED_BYTES:
+                                raise AddonError("Archive expanded data exceeds its declared or configured size limit")
+                            dst.write(chunk)
+                    if member_bytes != info.file_size:
+                        raise AddonError("Archive member size does not match its directory metadata")
             manifest = self._read_manifest(staging)
             destination = self.root / manifest["id"]
             if destination.exists():

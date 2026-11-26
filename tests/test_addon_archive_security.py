@@ -1,4 +1,5 @@
 from __future__ import annotations
+import io
 import json
 import tempfile
 import unittest
@@ -7,7 +8,7 @@ import zipfile
 from pathlib import Path
 from unittest.mock import patch
 
-from rintroflix.addons import AddonError, AddonManager
+from rintroflix.addons import AddonError, AddonManager, MAX_EXPANDED_BYTES
 
 class FakeConfig:
     def __init__(self): self.values = {}
@@ -109,6 +110,21 @@ class AddonArchiveSecurityTests(unittest.TestCase):
         with self.assertRaises(AddonError):
             self.manager.install_archive(self.package({"sample/../escape.py": b"bad"}))
         self.assertEqual(list(self.root.iterdir()), [])
+
+    def test_rejects_actual_stream_larger_than_declared_zip_member_size(self):
+        archive = self.package(self.valid_members())
+        original_open = zipfile.ZipFile.open
+
+        def dishonest_open(zip_file, name, mode="r", pwd=None, *, force_zip64=False):
+            member_name = getattr(name, "filename", name)
+            if member_name == "sample/addon.py":
+                return io.BytesIO(b"x" * (MAX_EXPANDED_BYTES + 1))
+            return original_open(zip_file, name, mode, pwd, force_zip64=force_zip64)
+
+        with patch("rintroflix.addons.zipfile.ZipFile.open", new=dishonest_open):
+            with self.assertRaises(AddonError):
+                self.manager.install_archive(archive)
+        self.assertEqual(list(self.root.iterdir()), [], "oversized streamed payload must not leave staged files")
 
 if __name__ == "__main__":
     unittest.main()

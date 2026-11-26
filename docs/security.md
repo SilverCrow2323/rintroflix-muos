@@ -8,7 +8,7 @@ RintrofliX handles user-supplied playlist URLs, network responses, downloaded ar
 |---|---|---|
 | HTTPS requests | Certificate verification remains enabled | Does not make a source trustworthy |
 | Network reads | Bounded download sizes | A trusted endpoint can still serve bad content |
-| Add-on archives | Path/type/size validation | Not a sandbox or malware scanner |
+| Add-on archives | Path/type/member-count limits, declared and streamed expanded-byte budgets, duplicate-path rejection | Not a sandbox or malware scanner |
 | Add-on loading | Disabled until explicit enable | Enabled code runs with app permissions |
 | Repository packages | SHA-256 compared with index | Does not authenticate the index publisher |
 
