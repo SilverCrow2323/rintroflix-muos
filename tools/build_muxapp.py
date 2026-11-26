@@ -14,7 +14,7 @@ def read_version():
     if not VERSION_FILE.is_file():
         raise SystemExit("Missing VERSION file")
     import re
-    match = re.search(r"^RintrofliX\\s+(\\d+(?:\\.\\d+){1,3}(?:[-+][0-9A-Za-z.-]+)?)\\s*$", VERSION_FILE.read_text(encoding="utf-8"), re.M)
+    match = re.search(r"^RintrofliX\s+(\d+(?:\.\d+){1,3}(?:[-+][0-9A-Za-z.-]+)?)\s*$", VERSION_FILE.read_text(encoding="utf-8"), re.M)
     if not match:
         raise SystemExit("VERSION must contain: RintrofliX <semantic-version>")
     return match.group(1)
