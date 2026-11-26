@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Fix add-on removal ordering: dependency checks and deactivation now happen before package deletion, preventing enabled dependants from being left with a missing dependency. A failed filesystem removal leaves the package installed but disabled.
+- Add regression tests for blocked dependency removal, successful removal and filesystem failure.
+
+
 ## 2.0.0 — Handheld Media Centre
 
 - Rebuilt the interface around a Kodi-inspired handheld media-centre layout.
