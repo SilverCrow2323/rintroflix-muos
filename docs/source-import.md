@@ -18,9 +18,9 @@
 | rintroflix/fbdisplay.py | ✅ Imported | Optional framebuffer presentation |
 | lib/glyph_install.sh | ✅ Imported | muOS theme glyph installation |
 | mux_launch.sh | ⚠️ Imported; review required | muOS launcher and runtime discovery |
-| rintroflix/main.py | ⏳ Pending | Main application and screen workflows |
-| rintroflix/ui.py | ⏳ Pending | Pygame interface |
-| rintroflix/player.py | ⏳ Pending | MPV IPC, playback OSD and controls |
+| rintroflix/main.py | ✅ Imported | Main application and screen workflows |
+| rintroflix/ui.py | ✅ Imported | Pygame interface |
+| rintroflix/player.py | ✅ Imported | MPV IPC, playback OSD and controls |
 | rintroflix/logos.py | ✅ Imported | Asynchronous channel-logo cache |
 
 ## Automated checks
@@ -39,9 +39,9 @@ The source sanity workflow passing does **not** mean the application is complete
 | Cabin font files and font licence | ⏳ Pending |
 | App glyph and artwork | ⏳ Pending |
 | Add-on SDK, architecture, changelog and build report | ✅ Imported |
-| Automated tests (tests/test_core.py) | ⏳ Pending |
-| Release builder (tools/build_release.py) | ⏳ Pending |
-| 2.6.0 .muxapp and source archive generation in CI | ⏳ Pending |
+| Automated tests (tests/test_rintroflix.py and test_build_muxapp.py) | ✅ Added in this repository |
+| muOS package builder (tools/build_muxapp.py) | ✅ Imported and exercised by CI |
+| Version-matched .muxapp build in CI | ⏳ Next step |
 | Device validation on RG35XX H / H700 | ⏳ Not run in this environment |
 
 ## Import rules
@@ -54,4 +54,4 @@ The source sanity workflow passing does **not** mean the application is complete
 
 ## Next integration milestone
 
-Import the remaining UI/player modules and assets, then add the complete test suite and release builder. Only after that should CI run Python compilation, unit tests, shell validation, archive CRC/content checks and the private-URL scan before producing a .muxapp.
+Complete the remaining artwork/font import and compare the mirrored runtime against the verified 2.6.4 working tree. CI now runs parser/add-on/package-builder tests and validates a generated .muxapp; device qualification remains separate.

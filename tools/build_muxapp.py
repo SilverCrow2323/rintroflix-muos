@@ -8,6 +8,16 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 APP_DIR = "RintrofliX"
+VERSION_FILE = ROOT / "VERSION"
+
+def read_version():
+    if not VERSION_FILE.is_file():
+        raise SystemExit("Missing VERSION file")
+    import re
+    match = re.search(r"^RintrofliX\\s+(\\d+(?:\\.\\d+){1,3}(?:[-+][0-9A-Za-z.-]+)?)\\s*$", VERSION_FILE.read_text(encoding="utf-8"), re.M)
+    if not match:
+        raise SystemExit("VERSION must contain: RintrofliX <semantic-version>")
+    return match.group(1)
 INCLUDE_FILES = (
     "mux_launch.sh", "mux_lang.ini", "VERSION", "README.md",
     "ARCHITECTURE.md", "CHANGELOG.md", "ADDON_SDK.md",
@@ -16,9 +26,11 @@ INCLUDE_DIRS = ("rintroflix", "lib", "tools", "presets", "resources", "glyph", "
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--output", default="dist/RintrofliX-2.6.3.muxapp")
+    parser.add_argument("--output", default=None)
     args = parser.parse_args()
-    output = (ROOT / args.output).resolve()
+    version = read_version()
+    output_arg = args.output or ("dist/RintrofliX-%s.muxapp" % version)
+    output = (ROOT / output_arg).resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
 
     required = (
