@@ -287,8 +287,11 @@ class AddonManager:
         item = next((x for x in self.items if x["manifest"]["id"] == addon_id), None)
         if not item:
             return False
-        shutil.rmtree(item["folder"])
+        # Check enabled dependants and clear the enabled state before deleting
+        # files. If filesystem removal fails, the add-on remains installed but
+        # disabled instead of leaving a dangling enabled ID in configuration.
         self.set_enabled(addon_id, False)
+        shutil.rmtree(item["folder"])
         self.discover(load_enabled=False)
         return True
 
