@@ -16,6 +16,9 @@ API_VERSION = 2
 SUPPORTED_API_VERSIONS = (1, 2)
 MAX_ARCHIVE_BYTES = 12 * 1024 * 1024
 MAX_EXPANDED_BYTES = 24 * 1024 * 1024
+MAX_ARCHIVE_MEMBERS = 512
+MAX_MEMBER_PATH_BYTES = 240
+MAX_MEMBER_DEPTH = 12
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{1,47}$")
 VERSION_RE = re.compile(r"^\d+(?:\.\d+){0,2}(?:[-+][0-9A-Za-z.-]+)?$")
 CONSTRAINT_RE = re.compile(r"^(>=|<=|==|>|<|~=)?\s*(\d+(?:\.\d+){0,2})$")
@@ -71,12 +74,7 @@ class AddonAPI:
         return tuple(self.app.playlist.channels if self.app.playlist else ())
 
     def register_source(self, source_id, label, loader, play=None):
-        """Register a source provider. Available only to API v2 add-ons.
-
-        loader() must return an iterable of rintroflix.m3u.Channel instances.
-        Optional play(channel) may handle playback itself and return True; False
-        or None delegates to the core playback adapter.
-        """
+        """Register a source provider. Available only to API v2 add-ons."""
         if self.api_version < 2:
             raise AddonError("register_source requires add-on API v2")
         if not callable(loader):
@@ -172,7 +170,6 @@ class AddonManager:
                              "loader": loader, "play": play})
 
     def channels(self):
-        """Load registered source channels; isolate provider failures."""
         from .m3u import Channel
         result = []
         for source in self.sources:
@@ -242,7 +239,6 @@ class AddonManager:
                 self.errors.append((addon_id, "Load failed: %s" % str(exc)[:120]))
 
     def compatibility_errors(self, manifest, enabled_ids=None):
-        """Return unmet runtime/add-on requirements without executing code."""
         from .config import APP_VERSION
         errors = []
         requires = manifest.get("requires", {})
@@ -302,25 +298,39 @@ class AddonManager:
         try:
             with zipfile.ZipFile(source, "r") as archive:
                 members = archive.infolist()
+                if len(members) > MAX_ARCHIVE_MEMBERS:
+                    raise AddonError("Package contains too many files")
                 expanded = sum(max(0, info.file_size) for info in members)
                 if expanded > MAX_EXPANDED_BYTES:
                     raise AddonError("Expanded package exceeds 24 MB")
-                manifest_member = next((i for i in members if PurePosixPath(i.filename).name == "addon.json"), None)
-                if not manifest_member:
-                    raise AddonError("Package does not contain addon.json")
-                prefix = str(PurePosixPath(manifest_member.filename).parent)
-                if prefix == ".":
-                    prefix = ""
+                seen = set()
                 for info in members:
-                    parts = PurePosixPath(info.filename).parts
-                    if PurePosixPath(info.filename).is_absolute() or ".." in parts:
+                    name = info.filename
+                    if not name or "\\" in name or len(name.encode("utf-8")) > MAX_MEMBER_PATH_BYTES:
+                        raise AddonError("Invalid or oversized path in add-on archive")
+                    raw_parts = name.rstrip("/").split("/")
+                    if any(part in ("", ".", "..") for part in raw_parts) or len(raw_parts) > MAX_MEMBER_DEPTH:
                         raise AddonError("Unsafe path in add-on archive")
-                    # Reject symlinks and special files.
+                    normalized = "/".join(raw_parts)
+                    if normalized in seen:
+                        raise AddonError("Duplicate path in add-on archive: " + normalized)
+                    seen.add(normalized)
                     mode = (info.external_attr >> 16) & 0o170000
                     if mode not in (0, 0o100000, 0o040000):
                         raise AddonError("Special files are not allowed")
+                manifests = [i for i in members if PurePosixPath(i.filename).name == "addon.json" and not i.is_dir()]
+                if len(manifests) != 1:
+                    raise AddonError("Package must contain exactly one addon.json")
+                prefix = str(PurePosixPath(manifests[0].filename).parent)
+                if prefix == ".":
+                    prefix = ""
+                for info in members:
                     rel = PurePosixPath(info.filename)
-                    if prefix and str(rel).startswith(prefix + "/"):
+                    if prefix and str(rel) != prefix and not str(rel).startswith(prefix + "/"):
+                        raise AddonError("Files outside the add-on package root are not allowed")
+                    if prefix and str(rel) == prefix:
+                        rel = PurePosixPath()
+                    elif prefix:
                         rel = PurePosixPath(*rel.parts[len(PurePosixPath(prefix).parts):])
                     if not rel.parts:
                         continue
@@ -328,7 +338,6 @@ class AddonManager:
                     if info.is_dir():
                         target.mkdir(parents=True, exist_ok=True)
                         continue
-                    # Keep package surface deliberately small and auditable.
                     if target.suffix.lower() not in (".py", ".json", ".md", ".txt", ".png", ".jpg", ".jpeg", ".svg"):
                         raise AddonError("Unsupported file type in add-on: " + target.suffix)
                     target.parent.mkdir(parents=True, exist_ok=True)
