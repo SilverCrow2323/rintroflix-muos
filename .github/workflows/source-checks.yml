@@ -4,12 +4,14 @@ on:
     branches: [main]
     paths:
       - "rintroflix/**"
+      - "tests/**"
       - "lib/**"
       - "mux_launch.sh"
       - ".github/workflows/source-checks.yml"
   pull_request:
     paths:
       - "rintroflix/**"
+      - "tests/**"
       - "lib/**"
       - "mux_launch.sh"
       - ".github/workflows/source-checks.yml"
@@ -37,6 +39,8 @@ jobs:
           test -f mux_launch.sh
       - name: Compile Python application
         run: python -m compileall -q rintroflix
+      - name: Run add-on lifecycle regression tests
+        run: python -m unittest discover -s tests -v
       - name: Validate shell scripts
         run: |
           bash -n mux_launch.sh
