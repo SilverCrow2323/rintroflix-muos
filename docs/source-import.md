@@ -1,7 +1,7 @@
 # Source import status
 
 > [!WARNING]
-> This repository is not yet a complete application source mirror. Do not use the current main branch as a release/build source until every required runtime file and the release verification suite have been imported and CI is green.
+> This repository is still a **partial source mirror**, not a release-equivalent archive of the verified upstream RintrofliX working tree. The application modules and a version-matched muOS package builder are present, but artwork/fonts and full upstream parity still require review. Do not publish a stable release until that comparison and device qualification are complete.
 
 ## Imported modules
 
@@ -25,12 +25,22 @@
 
 ## Automated checks
 
-The repository now has two independent workflows:
+The repository has two independent workflows:
 
 - [Handbook build and deployment](https://github.com/SilverCrow2323/rintroflix-muos/actions/workflows/docs.yml) — MkDocs strict build and GitHub Pages deployment.
-- [Source sanity checks](https://github.com/SilverCrow2323/rintroflix-muos/actions/workflows/source-checks.yml) — Python bytecode compilation, shell syntax validation and required-path checks for the imported subset.
+- [Source sanity checks](https://github.com/SilverCrow2323/rintroflix-muos/actions/workflows/source-checks.yml) — required runtime entry points, Python compilation, unit and package-builder tests, muOS .muxapp build/archive verification, shell syntax and imported core-module checks.
 
-The source sanity workflow passing does **not** mean the application is complete: it can only compile files that are currently present in the repository. The original project reference documents are also mirrored at the repository root (`ADDON_SDK.md`, `ARCHITECTURE.md`, `CHANGELOG.md`, `BUILD-REPORT.md`, `VERSION`).
+### Verified run — 27 November 2026
+
+[Source sanity run #45972545453](https://github.com/SilverCrow2323/rintroflix-muos/actions/runs/45972545453) completed successfully on `feat/addon-actual-byte-budget`:
+
+- Runtime entry points and imported core modules were present.
+- Python application and test sources compiled.
+- Add-on archive validation and staging tests passed.
+- Shell scripts passed syntax validation.
+- The CI package workflow verified the .muxapp builder and archive-safety path.
+
+A green source workflow establishes only the checks actually run against the mirrored subset. It does not establish full upstream parity, publisher authenticity for add-ons or physical-device behavior.
 
 ## Remaining source assets and verification
 
@@ -39,14 +49,15 @@ The source sanity workflow passing does **not** mean the application is complete
 | Cabin font files and font licence | ⏳ Pending |
 | App glyph and artwork | ⏳ Pending |
 | Add-on SDK, architecture, changelog and build report | ✅ Imported |
-| Automated tests (tests/test_rintroflix.py and test_build_muxapp.py) | ✅ Added in this repository |
-| muOS package builder (tools/build_muxapp.py) | ✅ Imported and exercised by CI |
-| Version-matched .muxapp build in CI | ⏳ Next step |
+| Automated parser, add-on and package-builder tests | ✅ Present and exercised by CI |
+| muOS package builder (tools/build_muxapp.py) | ✅ Present and exercised by CI |
+| CI .muxapp build and archive-safety checks | ✅ Verified in the 27 November run |
+| Full comparison against the verified upstream 2.6.4 working tree | ⏳ Pending |
 | Device validation on RG35XX H / H700 | ⏳ Not run in this environment |
 
 ## Import rules
 
-- Keep the known personal playlist URL out of source, fixtures, logs and release artifacts.
+- Keep private playlist URLs out of source, fixtures, logs and release artifacts.
 - Keep TLS certificate verification enabled.
 - Treat add-ons as trusted Python code, not sandboxed extensions.
 - A repository package digest checks integrity against its index; it does not authenticate the publisher.
@@ -54,4 +65,4 @@ The source sanity workflow passing does **not** mean the application is complete
 
 ## Next integration milestone
 
-Complete the remaining artwork/font import and compare the mirrored runtime against the verified 2.6.4 working tree. CI now runs parser/add-on/package-builder tests and validates a generated .muxapp; device qualification remains separate.
+Import the remaining licensed artwork/font assets, then compare the mirrored runtime and packaging contents against the verified upstream 2.6.4 working tree. After that, qualify installation, playback, controller navigation, add-on lifecycle and storage behavior on the RG35XX H/H700. Device qualification remains separate from CI.
