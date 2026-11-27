@@ -88,7 +88,11 @@ class AddonManager:
     def __init__(self, app):
         self.app = app
         self.root = C.ADDON_DIR
+        if self.root.is_symlink():
+            raise AddonError("Add-on directory must not be a symlink")
         self.root.mkdir(parents=True, exist_ok=True)
+        if self.root.is_symlink() or not self.root.is_dir():
+            raise AddonError("Add-on directory must be a real directory")
         self.items = []
         self.actions = []
         self.sources = []
@@ -96,8 +100,19 @@ class AddonManager:
         self.discover(load_enabled=False)
 
     @staticmethod
+    def _reject_symlinks(folder):
+        if folder.is_symlink():
+            raise AddonError("Symlinked add-on directories are not allowed")
+        for path in folder.rglob("*"):
+            if path.is_symlink():
+                raise AddonError("Symlinks are not allowed inside installed add-ons")
+
+    @staticmethod
     def _read_manifest(folder):
+        AddonManager._reject_symlinks(folder)
         path = folder / "addon.json"
+        if path.is_symlink():
+            raise AddonError("Add-on manifest must not be a symlink")
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, ValueError) as exc:
@@ -117,7 +132,10 @@ class AddonManager:
         p = PurePosixPath(entry)
         if p.is_absolute() or ".." in p.parts or not entry.endswith(".py"):
             raise AddonError("Invalid add-on entry point")
-        if not (folder / Path(*p.parts)).is_file():
+        entry_path = folder / Path(*p.parts)
+        if entry_path.is_symlink():
+            raise AddonError("Add-on entry point must not be a symlink")
+        if not entry_path.is_file():
             raise AddonError("Add-on entry point is missing")
         data.setdefault("name", addon_id)
         data.setdefault("version", "0.0.0")
@@ -146,8 +164,16 @@ class AddonManager:
         enabled = set(self.app.cfg.get("enabled_addons", []))
         self.items = []
         self.errors = []
+        if self.root.is_symlink() or (self.root.exists() and not self.root.is_dir()):
+            self.errors.append((str(self.root), "Add-on directory must be a real directory, not a symlink"))
+            return self.items
         for folder in sorted(self.root.iterdir()) if self.root.exists() else []:
-            if not folder.is_dir() or folder.name.startswith("."):
+            if folder.name.startswith("."):
+                continue
+            if folder.is_symlink():
+                self.errors.append((folder.name, "Symlinked add-on directories are not allowed"))
+                continue
+            if not folder.is_dir():
                 continue
             try:
                 manifest = self._read_manifest(folder)
@@ -289,6 +315,8 @@ class AddonManager:
         return True
 
     def install_archive(self, archive_path):
+        if self.root.is_symlink() or not self.root.is_dir():
+            raise AddonError("Add-on installation directory must be a real directory")
         source = Path(archive_path)
         if not source.is_file() or source.stat().st_size > MAX_ARCHIVE_BYTES:
             raise AddonError("Archive missing or larger than 12 MB")
@@ -357,7 +385,7 @@ class AddonManager:
                         raise AddonError("Archive member size does not match its directory metadata")
             manifest = self._read_manifest(staging)
             destination = self.root / manifest["id"]
-            if destination.exists():
+            if destination.exists() or destination.is_symlink():
                 raise AddonError("An add-on with this ID is already installed")
             staging.rename(destination)
             self.discover(load_enabled=False)
