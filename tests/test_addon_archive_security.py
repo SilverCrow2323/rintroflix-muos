@@ -126,5 +126,40 @@ class AddonArchiveSecurityTests(unittest.TestCase):
                 self.manager.install_archive(archive)
         self.assertEqual(list(self.root.iterdir()), [], "oversized streamed payload must not leave staged files")
 
+    def test_discovery_rejects_symlinked_addon_directories(self):
+        outside = Path(self.temp.name) / "outside-addon"
+        outside.mkdir()
+        (outside / "addon.json").write_text(json.dumps(manifest()), encoding="utf-8")
+        (outside / "addon.py").write_text("def register(api): return []", encoding="utf-8")
+        (self.root / "linked-addon").symlink_to(outside, target_is_directory=True)
+        self.assertEqual(self.manager.discover(), [])
+        self.assertTrue(any("symlink" in message.lower() for _, message in self.manager.errors))
+
+    def test_manifest_rejects_symlinked_entrypoint_and_nested_files(self):
+        folder = self.root / "sample"
+        folder.mkdir()
+        (folder / "addon.json").write_text(json.dumps(manifest()), encoding="utf-8")
+        outside = Path(self.temp.name) / "outside.py"
+        outside.write_text("def register(api): return []", encoding="utf-8")
+        (folder / "addon.py").symlink_to(outside)
+        with self.assertRaisesRegex(AddonError, "Symlinks are not allowed"):
+            AddonManager._read_manifest(folder)
+        (folder / "addon.py").unlink()
+        (folder / "addon.py").write_text("def register(api): return []", encoding="utf-8")
+        (folder / "data.json").symlink_to(outside)
+        with self.assertRaisesRegex(AddonError, "Symlinks are not allowed"):
+            AddonManager._read_manifest(folder)
+
+    def test_install_rejects_symlinked_addon_root(self):
+        outside = Path(self.temp.name) / "outside-root"
+        outside.mkdir()
+        link = Path(self.temp.name) / "addons-link"
+        link.symlink_to(outside, target_is_directory=True)
+        self.manager.root = link
+        archive = self.package(self.valid_members())
+        with self.assertRaisesRegex(AddonError, "real directory"):
+            self.manager.install_archive(archive)
+        self.assertEqual(list(outside.iterdir()), [])
+
 if __name__ == "__main__":
     unittest.main()
