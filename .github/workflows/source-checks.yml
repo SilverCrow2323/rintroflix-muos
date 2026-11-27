@@ -37,6 +37,10 @@ jobs:
           test -f mux_launch.sh
       - name: Compile Python application
         run: python -m compileall -q rintroflix
+      - name: Run unit and package-builder tests
+        run: python -m unittest discover -s tests -v
+      - name: Build and verify muOS package
+        run: python tools/build_muxapp.py --output /tmp/RintrofliX-ci.muxapp
       - name: Validate shell scripts
         run: |
           bash -n mux_launch.sh

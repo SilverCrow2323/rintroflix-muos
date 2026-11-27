@@ -8,13 +8,13 @@
 <p align="center"><strong>A controller-first handheld media centre for muOS.</strong></p>
 <p align="center">
   <a href="https://github.com/SilverCrow2323/rintroflix-muos/actions"><img alt="Build" src="https://img.shields.io/github/actions/workflow/status/SilverCrow2323/rintroflix-muos/docs.yml?branch=main&label=docs"></a>
-  <img alt="Version" src="https://img.shields.io/badge/version-2.6.0-8b5cf6">
+  <img alt="Version" src="https://img.shields.io/badge/version-2.6.4-8b5cf6">
   <img alt="Platform" src="https://img.shields.io/badge/platform-muOS%20%7C%20H700-06b6d4">
   <img alt="License" src="https://img.shields.io/badge/license-TBD-orange">
 </p>
 
 > [!IMPORTANT]
-> The canonical repository is being populated from the verified RintrofliX 2.6.0 working tree. Documentation and a first source subset are committed. The source mirror is **not yet complete**: core UI/player modules, artwork/fonts, tests and the release builder still need to be imported before this repository can produce a full application package.
+> The canonical repository is being populated from the verified RintrofliX 2.6.0 working tree. The main UI/player modules and the first package builder are now present. This remains a **partial source mirror**: artwork/fonts and full upstream parity still need review before it can be treated as a release-equivalent source archive.
 
 ## ✨ What is RintrofliX?
 
@@ -45,7 +45,7 @@ The documentation is a living website, not a static wall of text:
 
 | Area | Baseline |
 |---|---|
-| Application reference version | 2.6.0 |
+| Application reference version | 2.6.4 |
 | Add-on API | v1 actions + v2 source providers/playback hook |
 | Repository service | HTTPS index + SHA-256 package integrity |
 | Publisher signatures | Not implemented |
