@@ -1,42 +1,42 @@
 name: Source sanity checks
 on:
   push:
-    branches: [main]
+    branches: [main, "feat/**"]
     paths:
       - "rintroflix/**"
       - "lib/**"
       - "mux_launch.sh"
+      - "tests/**"
       - ".github/workflows/source-checks.yml"
   pull_request:
     paths:
       - "rintroflix/**"
       - "lib/**"
       - "mux_launch.sh"
+      - "tests/**"
       - ".github/workflows/source-checks.yml"
   workflow_dispatch:
-
 permissions:
   contents: read
-
 jobs:
   source-sanity:
-    name: Compile complete application source
+    name: Compile application and test add-on archive safety
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Verify complete runtime entry points
+      - name: Verify runtime entry points
         run: |
           test -f rintroflix/main.py
           test -f rintroflix/ui.py
           test -f rintroflix/player.py
           test -f mux_launch.sh
-      - name: Compile Python application
-        run: python -m compileall -q rintroflix
+      - name: Compile Python application and tests
+        run: python -m compileall -q rintroflix tests
+      - name: Test add-on archive validation and staging
+        run: python -m unittest discover -s tests -p 'test_addon_archive_security.py'
       - name: Validate shell scripts
         run: |
           bash -n mux_launch.sh

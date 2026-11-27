@@ -8,7 +8,8 @@ RintrofliX handles user-supplied playlist URLs, network responses, downloaded ar
 |---|---|---|
 | HTTPS requests | Certificate verification remains enabled | Does not make a source trustworthy |
 | Network reads | Bounded download sizes | A trusted endpoint can still serve bad content |
-| Add-on archives | Path/type/size validation | Not a sandbox or malware scanner |
+| Add-on archives | Path/type/member-count limits, declared and streamed expanded-byte budgets, duplicate-path rejection | Not a sandbox or malware scanner |
+| Installed add-on trees | Reject symlinked add-on roots, directories, manifests, entry points and nested files before discovery/loading | Does not protect against privileged concurrent filesystem tampering or hard links |
 | Add-on loading | Disabled until explicit enable | Enabled code runs with app permissions |
 | Repository packages | SHA-256 compared with index | Does not authenticate the index publisher |
 
@@ -40,3 +41,8 @@ flowchart TD
 - Do not disable TLS verification to work around certificate errors.
 - Prefer HTTPS sources and inspect add-on permissions before enabling.
 - Report security issues privately to the repository maintainer rather than posting exploitable details publicly.
+
+
+## Installed add-on filesystem boundary
+
+The add-on root and each discovered package tree must be real directories/files, not symlinks. Discovery rejects symlinked package directories; manifest validation rejects symlinks anywhere inside an installed package, including the entry point and nested resources. Archive extraction already rejects special files and writes into a private staging directory. This reduces path redirection through local add-on folders but does not sandbox enabled Python code or defend against a privileged process racing filesystem checks.
