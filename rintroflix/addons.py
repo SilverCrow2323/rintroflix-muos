@@ -16,6 +16,9 @@ API_VERSION = 2
 SUPPORTED_API_VERSIONS = (1, 2)
 MAX_ARCHIVE_BYTES = 12 * 1024 * 1024
 MAX_EXPANDED_BYTES = 24 * 1024 * 1024
+MAX_ARCHIVE_MEMBERS = 512
+MAX_SINGLE_FILE_BYTES = 8 * 1024 * 1024
+MAX_COMPRESSION_RATIO = 200
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{1,47}$")
 VERSION_RE = re.compile(r"^\d+(?:\.\d+){0,2}(?:[-+][0-9A-Za-z.-]+)?$")
 CONSTRAINT_RE = re.compile(r"^(>=|<=|==|>|<|~=)?\s*(\d+(?:\.\d+){0,2})$")
@@ -316,16 +319,33 @@ class AddonManager:
         try:
             with zipfile.ZipFile(source, "r") as archive:
                 members = archive.infolist()
+                if len(members) > MAX_ARCHIVE_MEMBERS:
+                    raise AddonError("Package contains too many archive entries")
                 expanded = sum(max(0, info.file_size) for info in members)
                 if expanded > MAX_EXPANDED_BYTES:
                     raise AddonError("Expanded package exceeds 24 MB")
-                manifest_member = next((i for i in members if PurePosixPath(i.filename).name == "addon.json"), None)
-                if not manifest_member:
-                    raise AddonError("Package does not contain addon.json")
+                for info in members:
+                    if info.file_size < 0 or info.compress_size < 0:
+                        raise AddonError("Archive contains an invalid entry size")
+                    if info.file_size > MAX_SINGLE_FILE_BYTES:
+                        raise AddonError("An add-on file exceeds the 8 MB per-file limit")
+                    if info.file_size >= 64 * 1024 and (
+                        info.compress_size == 0
+                        or info.file_size > info.compress_size * MAX_COMPRESSION_RATIO
+                    ):
+                        raise AddonError("Archive entry compression ratio exceeds the safety limit")
+                manifest_members = [
+                    item for item in members
+                    if PurePosixPath(item.filename).name.casefold() == "addon.json"
+                ]
+                if len(manifest_members) != 1:
+                    raise AddonError("Package must contain exactly one addon.json")
+                manifest_member = manifest_members[0]
                 prefix = str(PurePosixPath(manifest_member.filename).parent)
                 if prefix == ".":
                     prefix = ""
                 seen_targets = set()
+                actual_expanded = 0
                 for info in members:
                     raw_name = info.filename
                     normalized_name = raw_name[:-1] if info.is_dir() and raw_name.endswith("/") else raw_name
@@ -361,8 +381,21 @@ class AddonManager:
                     if target.suffix.lower() not in (".py", ".json", ".md", ".txt", ".png", ".jpg", ".jpeg", ".svg"):
                         raise AddonError("Unsupported file type in add-on: " + target.suffix)
                     target.parent.mkdir(parents=True, exist_ok=True)
-                    with archive.open(info) as src, target.open("wb") as dst:
-                        shutil.copyfileobj(src, dst)
+                    copied = 0
+                    with archive.open(info) as src, target.open("xb") as dst:
+                        while True:
+                            block = src.read(64 * 1024)
+                            if not block:
+                                break
+                            copied += len(block)
+                            actual_expanded += len(block)
+                            if copied > info.file_size or copied > MAX_SINGLE_FILE_BYTES:
+                                raise AddonError("Archive entry expanded beyond its declared size")
+                            if actual_expanded > MAX_EXPANDED_BYTES:
+                                raise AddonError("Archive expanded beyond the package size limit")
+                            dst.write(block)
+                    if copied != info.file_size:
+                        raise AddonError("Archive entry size does not match its directory record")
             manifest = self._read_manifest(staging)
             destination = self.root / manifest["id"]
             if destination.exists():
