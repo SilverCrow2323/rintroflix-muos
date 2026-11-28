@@ -331,8 +331,8 @@ class AddonManager:
                     normalized_name = raw_name[:-1] if info.is_dir() and raw_name.endswith("/") else raw_name
                     if (
                         not normalized_name
-                        or "\\\\" in normalized_name
-                        or "\\x00" in normalized_name
+                        or "\\" in normalized_name
+                        or "\x00" in normalized_name
                         or ":" in normalized_name
                         or any(ord(char) < 32 or ord(char) == 127 for char in normalized_name)
                     ):
