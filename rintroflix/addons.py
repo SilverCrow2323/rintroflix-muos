@@ -188,6 +188,34 @@ class AddonManager:
                              "label": str(label or source_id)[:64],
                              "loader": loader, "play": play})
 
+    def _dependency_order(self, enabled_ids):
+        """Return enabled add-ons in dependency-first order; reject cycles."""
+        installed = {item["manifest"]["id"]: item["manifest"] for item in self.items}
+        enabled = set(enabled_ids)
+        visiting = []
+        visited = set()
+        ordered = []
+
+        def visit(addon_id):
+            if addon_id in visited or addon_id not in installed:
+                return
+            if addon_id in visiting:
+                start = visiting.index(addon_id)
+                cycle = visiting[start:] + [addon_id]
+                raise AddonError("Add-on dependency cycle: " + " -> ".join(cycle))
+            visiting.append(addon_id)
+            requires = installed[addon_id].get("requires", {}).get("addons", {})
+            for dependency_id in sorted(requires):
+                if dependency_id in enabled and dependency_id in installed:
+                    visit(dependency_id)
+            visiting.pop()
+            visited.add(addon_id)
+            ordered.append(addon_id)
+
+        for addon_id in sorted(enabled):
+            visit(addon_id)
+        return ordered
+
     def channels(self):
         """Load registered source channels; isolate provider failures."""
         from .m3u import Channel
@@ -226,11 +254,17 @@ class AddonManager:
         self.actions = []
         self.sources = []
         enabled = set(self.app.cfg.get("enabled_addons", []))
-        for item in self.items:
-            manifest = item["manifest"]
-            addon_id = manifest["id"]
-            if addon_id not in enabled:
+        try:
+            ordered_ids = self._dependency_order(enabled)
+        except AddonError as exc:
+            self.errors.append(("*", "Load blocked: %s" % exc))
+            return
+        by_id = {item["manifest"]["id"]: item for item in self.items}
+        for addon_id in ordered_ids:
+            item = by_id.get(addon_id)
+            if item is None:
                 continue
+            manifest = item["manifest"]
             try:
                 problems = self.compatibility_errors(manifest, enabled)
                 if problems:
@@ -276,6 +310,11 @@ class AddonManager:
                 errors.append("Dependency %s is not installed" % dependency_id)
             elif not _satisfies(dependency.get("version", "0.0.0"), constraint):
                 errors.append("Dependency %s requires version %s" % (dependency_id, constraint))
+        candidate_enabled = enabled | {manifest.get("id")}
+        try:
+            self._dependency_order(candidate_enabled)
+        except AddonError as exc:
+            errors.append(str(exc))
         return errors
 
     def set_enabled(self, addon_id, enabled):
