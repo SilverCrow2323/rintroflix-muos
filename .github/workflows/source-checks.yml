@@ -4,12 +4,14 @@ on:
     branches: [main]
     paths:
       - "rintroflix/**"
+      - "tests/**"
       - "lib/**"
       - "mux_launch.sh"
       - ".github/workflows/source-checks.yml"
   pull_request:
     paths:
       - "rintroflix/**"
+      - "tests/**"
       - "lib/**"
       - "mux_launch.sh"
       - ".github/workflows/source-checks.yml"
@@ -41,6 +43,10 @@ jobs:
         run: |
           bash -n mux_launch.sh
           bash -n lib/glyph_install.sh
+      - name: Run add-on archive security regressions
+        run: |
+          python -m pip install pytest
+          PYTHONPATH=. pytest -q tests/test_addon_archive_safety.py
       - name: Verify imported core modules
         run: |
           test -f rintroflix/config.py

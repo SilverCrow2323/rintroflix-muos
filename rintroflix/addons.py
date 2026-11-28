@@ -16,6 +16,9 @@ API_VERSION = 2
 SUPPORTED_API_VERSIONS = (1, 2)
 MAX_ARCHIVE_BYTES = 12 * 1024 * 1024
 MAX_EXPANDED_BYTES = 24 * 1024 * 1024
+MAX_ARCHIVE_MEMBERS = 512
+MAX_SINGLE_FILE_BYTES = 8 * 1024 * 1024
+MAX_COMPRESSION_RATIO = 200
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{1,47}$")
 VERSION_RE = re.compile(r"^\d+(?:\.\d+){0,2}(?:[-+][0-9A-Za-z.-]+)?$")
 CONSTRAINT_RE = re.compile(r"^(>=|<=|==|>|<|~=)?\s*(\d+(?:\.\d+){0,2})$")
@@ -119,7 +122,21 @@ class AddonManager:
         p = PurePosixPath(entry)
         if p.is_absolute() or ".." in p.parts or not entry.endswith(".py"):
             raise AddonError("Invalid add-on entry point")
-        if not (folder / Path(*p.parts)).is_file():
+        if folder.is_symlink():
+            raise AddonError("Add-on directory must not be a symbolic link")
+        entry_path = folder.joinpath(*p.parts)
+        current = folder
+        for part in p.parts:
+            current = current / part
+            if current.is_symlink():
+                raise AddonError("Add-on entry point must not traverse symbolic links")
+        try:
+            resolved_folder = folder.resolve(strict=True)
+            resolved_entry = entry_path.resolve(strict=True)
+            resolved_entry.relative_to(resolved_folder)
+        except (OSError, ValueError):
+            raise AddonError("Add-on entry point is missing or escapes its directory")
+        if not resolved_entry.is_file():
             raise AddonError("Add-on entry point is missing")
         data.setdefault("name", addon_id)
         data.setdefault("version", "0.0.0")
@@ -171,6 +188,34 @@ class AddonManager:
                              "label": str(label or source_id)[:64],
                              "loader": loader, "play": play})
 
+    def _dependency_order(self, enabled_ids):
+        """Return enabled add-ons in dependency-first order; reject cycles."""
+        installed = {item["manifest"]["id"]: item["manifest"] for item in self.items}
+        enabled = set(enabled_ids)
+        visiting = []
+        visited = set()
+        ordered = []
+
+        def visit(addon_id):
+            if addon_id in visited or addon_id not in installed:
+                return
+            if addon_id in visiting:
+                start = visiting.index(addon_id)
+                cycle = visiting[start:] + [addon_id]
+                raise AddonError("Add-on dependency cycle: " + " -> ".join(cycle))
+            visiting.append(addon_id)
+            requires = installed[addon_id].get("requires", {}).get("addons", {})
+            for dependency_id in sorted(requires):
+                if dependency_id in enabled and dependency_id in installed:
+                    visit(dependency_id)
+            visiting.pop()
+            visited.add(addon_id)
+            ordered.append(addon_id)
+
+        for addon_id in sorted(enabled):
+            visit(addon_id)
+        return ordered
+
     def channels(self):
         """Load registered source channels; isolate provider failures."""
         from .m3u import Channel
@@ -209,11 +254,17 @@ class AddonManager:
         self.actions = []
         self.sources = []
         enabled = set(self.app.cfg.get("enabled_addons", []))
-        for item in self.items:
-            manifest = item["manifest"]
-            addon_id = manifest["id"]
-            if addon_id not in enabled:
+        try:
+            ordered_ids = self._dependency_order(enabled)
+        except AddonError as exc:
+            self.errors.append(("*", "Load blocked: %s" % exc))
+            return
+        by_id = {item["manifest"]["id"]: item for item in self.items}
+        for addon_id in ordered_ids:
+            item = by_id.get(addon_id)
+            if item is None:
                 continue
+            manifest = item["manifest"]
             try:
                 problems = self.compatibility_errors(manifest, enabled)
                 if problems:
@@ -259,6 +310,11 @@ class AddonManager:
                 errors.append("Dependency %s is not installed" % dependency_id)
             elif not _satisfies(dependency.get("version", "0.0.0"), constraint):
                 errors.append("Dependency %s requires version %s" % (dependency_id, constraint))
+        candidate_enabled = enabled | {manifest.get("id")}
+        try:
+            self._dependency_order(candidate_enabled)
+        except AddonError as exc:
+            errors.append(str(exc))
         return errors
 
     def set_enabled(self, addon_id, enabled):
@@ -302,28 +358,60 @@ class AddonManager:
         try:
             with zipfile.ZipFile(source, "r") as archive:
                 members = archive.infolist()
+                if len(members) > MAX_ARCHIVE_MEMBERS:
+                    raise AddonError("Package contains too many archive entries")
                 expanded = sum(max(0, info.file_size) for info in members)
                 if expanded > MAX_EXPANDED_BYTES:
                     raise AddonError("Expanded package exceeds 24 MB")
-                manifest_member = next((i for i in members if PurePosixPath(i.filename).name == "addon.json"), None)
-                if not manifest_member:
-                    raise AddonError("Package does not contain addon.json")
+                for info in members:
+                    if info.file_size < 0 or info.compress_size < 0:
+                        raise AddonError("Archive contains an invalid entry size")
+                    if info.file_size > MAX_SINGLE_FILE_BYTES:
+                        raise AddonError("An add-on file exceeds the 8 MB per-file limit")
+                    if info.file_size >= 64 * 1024 and (
+                        info.compress_size == 0
+                        or info.file_size > info.compress_size * MAX_COMPRESSION_RATIO
+                    ):
+                        raise AddonError("Archive entry compression ratio exceeds the safety limit")
+                manifest_members = [
+                    item for item in members
+                    if PurePosixPath(item.filename).name.casefold() == "addon.json"
+                ]
+                if len(manifest_members) != 1:
+                    raise AddonError("Package must contain exactly one addon.json")
+                manifest_member = manifest_members[0]
                 prefix = str(PurePosixPath(manifest_member.filename).parent)
                 if prefix == ".":
                     prefix = ""
+                seen_targets = set()
+                actual_expanded = 0
                 for info in members:
-                    parts = PurePosixPath(info.filename).parts
-                    if PurePosixPath(info.filename).is_absolute() or ".." in parts:
+                    raw_name = info.filename
+                    normalized_name = raw_name[:-1] if info.is_dir() and raw_name.endswith("/") else raw_name
+                    if (
+                        not normalized_name
+                        or "\\" in normalized_name
+                        or "\x00" in normalized_name
+                        or ":" in normalized_name
+                        or any(ord(char) < 32 or ord(char) == 127 for char in normalized_name)
+                    ):
+                        raise AddonError("Unsafe path in add-on archive")
+                    parts = normalized_name.split("/")
+                    if any(part in ("", ".", "..") for part in parts):
                         raise AddonError("Unsafe path in add-on archive")
                     # Reject symlinks and special files.
                     mode = (info.external_attr >> 16) & 0o170000
                     if mode not in (0, 0o100000, 0o040000):
                         raise AddonError("Special files are not allowed")
-                    rel = PurePosixPath(info.filename)
+                    rel = PurePosixPath(*parts)
                     if prefix and str(rel).startswith(prefix + "/"):
                         rel = PurePosixPath(*rel.parts[len(PurePosixPath(prefix).parts):])
                     if not rel.parts:
                         continue
+                    target_key = rel.as_posix().casefold()
+                    if target_key in seen_targets:
+                        raise AddonError("Duplicate or case-colliding path in add-on archive")
+                    seen_targets.add(target_key)
                     target = staging.joinpath(*rel.parts)
                     if info.is_dir():
                         target.mkdir(parents=True, exist_ok=True)
@@ -332,8 +420,21 @@ class AddonManager:
                     if target.suffix.lower() not in (".py", ".json", ".md", ".txt", ".png", ".jpg", ".jpeg", ".svg"):
                         raise AddonError("Unsupported file type in add-on: " + target.suffix)
                     target.parent.mkdir(parents=True, exist_ok=True)
-                    with archive.open(info) as src, target.open("wb") as dst:
-                        shutil.copyfileobj(src, dst)
+                    copied = 0
+                    with archive.open(info) as src, target.open("xb") as dst:
+                        while True:
+                            block = src.read(64 * 1024)
+                            if not block:
+                                break
+                            copied += len(block)
+                            actual_expanded += len(block)
+                            if copied > info.file_size or copied > MAX_SINGLE_FILE_BYTES:
+                                raise AddonError("Archive entry expanded beyond its declared size")
+                            if actual_expanded > MAX_EXPANDED_BYTES:
+                                raise AddonError("Archive expanded beyond the package size limit")
+                            dst.write(block)
+                    if copied != info.file_size:
+                        raise AddonError("Archive entry size does not match its directory record")
             manifest = self._read_manifest(staging)
             destination = self.root / manifest["id"]
             if destination.exists():
