@@ -81,3 +81,71 @@ def test_archive_rejects_backslash_paths(tmp_path):
         manager_at(root).install_archive(archive_path)
 
     assert list(root.iterdir()) == []
+
+
+def _valid_manifest():
+    return json.dumps({
+        "id": "safe-addon",
+        "api_version": 1,
+        "version": "1.0.0",
+        "entrypoint": "addon.py",
+    })
+
+
+def test_archive_rejects_excessive_member_count_before_install(tmp_path):
+    root = tmp_path / "installed"
+    root.mkdir()
+    archive_path = tmp_path / "many-files.zip"
+    with zipfile.ZipFile(archive_path, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("addon.json", _valid_manifest())
+        archive.writestr("addon.py", "def register(api): return []")
+        for index in range(511):
+            archive.writestr("data/%04d.txt" % index, "x")
+
+    with pytest.raises(AddonError, match="too many archive entries"):
+        manager_at(root).install_archive(archive_path)
+
+    assert list(root.iterdir()) == []
+
+
+def test_archive_rejects_single_file_over_eight_mib(tmp_path):
+    root = tmp_path / "installed"
+    root.mkdir()
+    archive_path = tmp_path / "oversized-file.zip"
+    with zipfile.ZipFile(archive_path, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("addon.json", _valid_manifest())
+        archive.writestr("addon.py", "x" * (8 * 1024 * 1024 + 1))
+
+    with pytest.raises(AddonError, match="per-file limit"):
+        manager_at(root).install_archive(archive_path)
+
+    assert list(root.iterdir()) == []
+
+
+def test_archive_rejects_extreme_compression_ratio(tmp_path):
+    root = tmp_path / "installed"
+    root.mkdir()
+    archive_path = tmp_path / "compressed-bomb.zip"
+    with zipfile.ZipFile(archive_path, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("addon.json", _valid_manifest())
+        archive.writestr("addon.py", "A" * (128 * 1024))
+
+    with pytest.raises(AddonError, match="compression ratio"):
+        manager_at(root).install_archive(archive_path)
+
+    assert list(root.iterdir()) == []
+
+
+def test_archive_requires_exactly_one_manifest_even_with_case_variants(tmp_path):
+    root = tmp_path / "installed"
+    root.mkdir()
+    archive_path = tmp_path / "two-manifests.zip"
+    with zipfile.ZipFile(archive_path, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("addon.json", _valid_manifest())
+        archive.writestr("addon.py", "def register(api): return []")
+        archive.writestr("nested/ADDON.JSON", _valid_manifest())
+
+    with pytest.raises(AddonError, match="exactly one addon.json"):
+        manager_at(root).install_archive(archive_path)
+
+    assert list(root.iterdir()) == []
