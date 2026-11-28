@@ -11,6 +11,7 @@ on:
   pull_request:
     paths:
       - "rintroflix/**"
+      - "tests/**"
       - "lib/**"
       - "mux_launch.sh"
       - ".github/workflows/source-checks.yml"
