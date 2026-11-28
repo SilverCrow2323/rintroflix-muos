@@ -119,7 +119,21 @@ class AddonManager:
         p = PurePosixPath(entry)
         if p.is_absolute() or ".." in p.parts or not entry.endswith(".py"):
             raise AddonError("Invalid add-on entry point")
-        if not (folder / Path(*p.parts)).is_file():
+        if folder.is_symlink():
+            raise AddonError("Add-on directory must not be a symbolic link")
+        entry_path = folder.joinpath(*p.parts)
+        current = folder
+        for part in p.parts:
+            current = current / part
+            if current.is_symlink():
+                raise AddonError("Add-on entry point must not traverse symbolic links")
+        try:
+            resolved_folder = folder.resolve(strict=True)
+            resolved_entry = entry_path.resolve(strict=True)
+            resolved_entry.relative_to(resolved_folder)
+        except (OSError, ValueError):
+            raise AddonError("Add-on entry point is missing or escapes its directory")
+        if not resolved_entry.is_file():
             raise AddonError("Add-on entry point is missing")
         data.setdefault("name", addon_id)
         data.setdefault("version", "0.0.0")
@@ -311,19 +325,34 @@ class AddonManager:
                 prefix = str(PurePosixPath(manifest_member.filename).parent)
                 if prefix == ".":
                     prefix = ""
+                seen_targets = set()
                 for info in members:
-                    parts = PurePosixPath(info.filename).parts
-                    if PurePosixPath(info.filename).is_absolute() or ".." in parts:
+                    raw_name = info.filename
+                    normalized_name = raw_name[:-1] if info.is_dir() and raw_name.endswith("/") else raw_name
+                    if (
+                        not normalized_name
+                        or "\\\\" in normalized_name
+                        or "\\x00" in normalized_name
+                        or ":" in normalized_name
+                        or any(ord(char) < 32 or ord(char) == 127 for char in normalized_name)
+                    ):
+                        raise AddonError("Unsafe path in add-on archive")
+                    parts = normalized_name.split("/")
+                    if any(part in ("", ".", "..") for part in parts):
                         raise AddonError("Unsafe path in add-on archive")
                     # Reject symlinks and special files.
                     mode = (info.external_attr >> 16) & 0o170000
                     if mode not in (0, 0o100000, 0o040000):
                         raise AddonError("Special files are not allowed")
-                    rel = PurePosixPath(info.filename)
+                    rel = PurePosixPath(*parts)
                     if prefix and str(rel).startswith(prefix + "/"):
                         rel = PurePosixPath(*rel.parts[len(PurePosixPath(prefix).parts):])
                     if not rel.parts:
                         continue
+                    target_key = rel.as_posix().casefold()
+                    if target_key in seen_targets:
+                        raise AddonError("Duplicate or case-colliding path in add-on archive")
+                    seen_targets.add(target_key)
                     target = staging.joinpath(*rel.parts)
                     if info.is_dir():
                         target.mkdir(parents=True, exist_ok=True)
